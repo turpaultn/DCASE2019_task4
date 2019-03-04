@@ -1,0 +1,10 @@
+__pycache__/
+.idea/
+.DS_STORE
+*.log
+features/
+missing_files/
+baseline/stored_data/
+baseline/test/
+dataset/audio/
+dataset/check_files/
