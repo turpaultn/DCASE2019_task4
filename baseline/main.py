@@ -22,20 +22,12 @@ from torch import nn
 from config import LOG
 
 
-def adjust_learning_rate(optimizer, epoch, step_in_epoch, total_steps_in_epoch):
-    epoch = epoch + step_in_epoch / total_steps_in_epoch
-    rampup_value = ramps.sigmoid_rampup(epoch, cfg.rampup_length)
+def adjust_learning_rate(optimizer, rampup_value, rampdown_value):
     # LR warm-up to handle large minibatch sizes from https://arxiv.org/abs/1706.02677
-    lr = rampup_value * (cfg.lr - cfg.initial_lr) + cfg.initial_lr
-    rampdown_value = ramps.sigmoid_rampdown(epoch, cfg.rampdown_length)
-    beta1 =  rampdown_value * cfg.beta1_before_rampdown + (1. - rampdown_value) * cfg.beta1_after_rampdown
+    lr = rampup_value * rampdown_value * cfg.max_learning_rate
+    beta1 = rampdown_value * cfg.beta1_before_rampdown + (1. - rampdown_value) * cfg.beta1_after_rampdown
     beta2 = (1. - rampup_value) * cfg.beta2_during_rampdup + rampup_value * cfg.beta2_after_rampup
     weight_decay = (1 - rampup_value) * cfg.weight_decay_during_rampup + cfg.weight_decay_after_rampup * rampup_value
-
-    # Cosine LR rampdown from https://arxiv.org/abs/1608.03983 (but one cycle only)
-    if cfg.rampdown_length:
-        assert cfg.rampdown_length >= cfg.n_epoch
-        lr *= ramps.cosine_rampdown(epoch, cfg.rampdown_length)
 
     for param_group in optimizer.param_groups:
         param_group['lr'] = lr
@@ -61,7 +53,12 @@ def train(train_loader, model, ema_model, optimizer, epoch, global_step):
 
     start = time.time()
     for i, (input, ema_input, target) in enumerate(train_loader):
-        adjust_learning_rate(optimizer, epoch, i, len(train_loader))
+        e_step = epoch + i / len(train_loader)
+        # Todo do the check for rampup and rampdown value
+        rampup_value = ramps.sigmoid_rampup(e_step, cfg.rampup_length)
+        rampdown_value = ramps.sigmoid_rampdown(e_step, cfg.rampdown_length)
+
+        adjust_learning_rate(optimizer, rampup_value, rampdown_value)
         meters.update('lr', optimizer.param_groups[0]['lr'])
 
         labeled_minibatch_size = target.data.ne(-1).sum()
@@ -109,17 +106,16 @@ def train(train_loader, model, ema_model, optimizer, epoch, global_step):
         loss += strong_class_loss
 
         # Consistency losses
+        consistency_cost = cfg.max_consistency_cost * rampup_value
         if cfg.consistency_weak:
-            weight_weak = cfg.consistency_weak * ramps.sigmoid_rampup(epoch, cfg.consistency_rampup)
-            meters.update('cons_weight_weak', weight_weak)
-            consistency_loss_weak = weight_weak * consistency_criterion_weak(weak_pred, weak_pred_ema)
+            meters.update('cons_weight_weak', consistency_cost)
+            consistency_loss_weak = consistency_cost * consistency_criterion_weak(weak_pred, weak_pred_ema)
             meters.update('weak_cons_loss', consistency_loss_weak.item())
             loss += consistency_loss_weak
 
         if cfg.consistency_strong:
-            weight_strong = cfg.consistency_strong * ramps.sigmoid_rampup(epoch, cfg.consistency_rampup)
-            meters.update('cons_weight', weight_strong)
-            consistency_loss_strong = weight_strong * consistency_criterion_strong(strong_pred, strong_pred_ema)
+            meters.update('cons_weight', consistency_cost)
+            consistency_loss_strong = consistency_cost * consistency_criterion_strong(strong_pred, strong_pred_ema)
             meters.update('strong_cons_loss', consistency_loss_strong.item())
             loss += consistency_loss_strong
 
@@ -145,7 +141,7 @@ def train(train_loader, model, ema_model, optimizer, epoch, global_step):
         'Srtong Cons {meters[strong_cons_loss]:.4f}\t'
         'EMA loss {meters[weak_ema_class_loss]:.4f}\t'
         'Strong EMA loss {meters[strong_ema_class_loss]:.4f}\t'.format(
-            epoch, meters=meters))
+            e_step, meters=meters))
     return global_step
 
 

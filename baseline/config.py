@@ -76,6 +76,7 @@ logit_distance_cost = 0.01
 
 
 max_consistency_cost = 100.
+max_learning_rate = 0.001
 consistency_weak = 1.
 consistency_strong = 1.
 consistency_rampup = 10
