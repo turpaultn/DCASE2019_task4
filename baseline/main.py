@@ -54,9 +54,15 @@ def train(train_loader, model, ema_model, optimizer, epoch, global_step):
     start = time.time()
     for i, (input, ema_input, target) in enumerate(train_loader):
         e_step = epoch + i / len(train_loader)
-        # Todo do the check for rampup and rampdown value
-        rampup_value = ramps.sigmoid_rampup(e_step, cfg.rampup_length)
-        rampdown_value = ramps.sigmoid_rampdown(e_step, cfg.rampdown_length)
+        if global_step < cfg.rampup_length:
+            rampup_value = ramps.sigmoid_rampup(e_step, cfg.rampup_length)
+        else:
+            rampup_value = 1.0
+
+        if global_step > (cfg.train_iter_count - cfg.rampdown_length):
+            rampdown_value = ramps.sigmoid_rampdown(e_step, cfg.rampdown_length)
+        else:
+            rampdown_value = 1.0
 
         adjust_learning_rate(optimizer, rampup_value, rampdown_value)
         meters.update('lr', optimizer.param_groups[0]['lr'])
@@ -141,7 +147,7 @@ def train(train_loader, model, ema_model, optimizer, epoch, global_step):
         'Srtong Cons {meters[strong_cons_loss]:.4f}\t'
         'EMA loss {meters[weak_ema_class_loss]:.4f}\t'
         'Strong EMA loss {meters[strong_ema_class_loss]:.4f}\t'.format(
-            e_step, meters=meters))
+            epoch, meters=meters))
     return global_step
 
 
@@ -216,7 +222,7 @@ if __name__ == '__main__':
 
     weak_df = dataset.intialize_and_get_df(cfg.weak, reduced_number_of_data)
     unlabel_df = dataset.intialize_and_get_df(cfg.unlabel, reduced_number_of_data)
-    synthetic_df = dataset.intialize_and_get_df(cfg.synthetic, reduced_number_of_data)
+    synthetic_df = dataset.intialize_and_get_df(cfg.synthetic, reduced_number_of_data, download=False)
     validation_df = dataset.intialize_and_get_df(cfg.validation, reduced_number_of_data)
 
     classes = DatasetDcase2019Task4.get_classes([weak_df, validation_df, synthetic_df])
@@ -297,8 +303,9 @@ if __name__ == '__main__':
     # ##############
     # Train
     # ##############
-    for epoch in range(cfg.n_epoch):
-        global_step = 0
+    global_step = 0
+    epoch = 0
+    while global_step < cfg.train_iter_count:
         crnn = crnn.train()
         crnn_ema = crnn_ema.train()
 
@@ -332,6 +339,7 @@ if __name__ == '__main__':
             if save_best_cb.apply(global_valid):
                 model_fname = os.path.join(saved_model_dir, "baseline_best")
                 torch.save(state, model_fname)
+        epoch += 1
 
     if cfg.save_best:
         state = torch.load(os.path.join(saved_model_dir, "baseline_best"))

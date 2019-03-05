@@ -68,12 +68,13 @@ weight_decay_after_rampup = 0.999
 
 decay_step = 100*1000
 decay_rate = 0.1
-rampup_length = 10
-rampdown_length = 1000
-
 
 logit_distance_cost = 0.01
 
+train_iter_count = 20000
+
+rampup_length = int(0.5 * train_iter_count)
+rampdown_length = int(0.1 * train_iter_count)
 
 max_consistency_cost = 100.
 max_learning_rate = 0.001

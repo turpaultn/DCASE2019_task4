@@ -91,7 +91,7 @@ class DatasetDcase2019Task4:
         create_folder(self.feature_dir)
         # create_folder(self.meta_features)
 
-    def intialize_and_get_df(self, csv_path, subpart_data=None):
+    def intialize_and_get_df(self, csv_path, subpart_data=None, download=True):
         """ Initialize the dataset, extract the features dataframes
         Args:
             csv_path: str, csv path in the initial dataset
@@ -103,7 +103,8 @@ class DatasetDcase2019Task4:
             The dataframe containing the right features and labels
         """
         meta_name = os.path.join(self.local_path, csv_path)
-        self.download_from_meta(meta_name, subpart_data)
+        if download:
+            self.download_from_meta(meta_name, subpart_data)
         return self.extract_features_from_meta(meta_name, subpart_data)
 
     @staticmethod
