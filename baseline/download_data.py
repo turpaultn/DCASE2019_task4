@@ -221,16 +221,16 @@ if __name__ == "__main__":
     download(filenames_test, result_dir, n_jobs=N_JOBS, chunk_size=CHUNK_SIZE)
 
     LOG.info("Train, weak data")
-    train_weak = os.path.join("metadata", "train", "weak.csv")
-    result_dir = os.path.join("audio", "train", "weak")
+    train_weak = os.path.join(dataset_folder, "metadata", "train", "weak.csv")
+    result_dir = os.path.join(dataset_folder, "audio", "train", "weak")
     # read metadata file and get only one filename once
     df = pd.read_csv(train_weak, header=0, sep='\t')
     filenames_weak = df["filename"].drop_duplicates()
     download(filenames_weak, result_dir, n_jobs=N_JOBS, chunk_size=CHUNK_SIZE)
 
     LOG.info("Train, unlabel in domain data")
-    train_unlabel_in_domain = os.path.join("metadata", "train", "unlabel_in_domain.csv")
-    result_dir = os.path.join("audio", "train", "unlabel_in_domain")
+    train_unlabel_in_domain = os.path.join(dataset_folder, "metadata", "train", "unlabel_in_domain.csv")
+    result_dir = os.path.join(dataset_folder, "audio", "train", "unlabel_in_domain")
     # read metadata file and get only one filename once
     df = pd.read_csv(train_unlabel_in_domain, header=0, sep='\t')
     filenames_unlabel_in_domain = df["filename"].drop_duplicates()
