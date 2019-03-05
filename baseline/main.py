@@ -16,7 +16,7 @@ from Scaler import Scaler
 from evaluation_measures import event_based_evaluation_df, get_f_measure_by_class
 from models.CRNN import CRNN
 import config as cfg
-from utils import ManyHotEncoder, AverageMeterSet, create_folder, SaveBest
+from utils import ManyHotEncoder, AverageMeterSet, create_folder, SaveBest, to_cuda_if_available
 import ramps
 from torch import nn
 from config import LOG
@@ -64,9 +64,11 @@ def update_ema_variables(model, ema_model, alpha, global_step):
 
 
 def train(train_loader, model, ema_model, optimizer, epoch, global_step):
-    class_criterion = nn.BCELoss().cuda()
+    class_criterion = nn.BCELoss()
     consistency_criterion_strong = nn.MSELoss()
     consistency_criterion_weak = nn.MSELoss()
+    [class_criterion, consistency_criterion_weak, consistency_criterion_strong] = to_cuda_if_available(
+        [class_criterion, consistency_criterion_weak, consistency_criterion_strong])
 
     meters = AverageMeterSet()
 
@@ -78,6 +80,8 @@ def train(train_loader, model, ema_model, optimizer, epoch, global_step):
         labeled_minibatch_size = target.data.ne(-1).sum()
         assert labeled_minibatch_size > 0
         meters.update('labeled_minibatch_size', labeled_minibatch_size)
+
+        [input, ema_input, target] = to_cuda_if_available([input, ema_input, target])
 
         # Outputs
         ema_model_out = ema_model(ema_input)
@@ -160,8 +164,8 @@ def train(train_loader, model, ema_model, optimizer, epoch, global_step):
 
 def get_predictions(model, valid_dataset, decoder, in_seconds=True, save_predictions=None):
     for i, (input, _) in enumerate(valid_dataset):
-        if torch.cuda.is_available():
-            input = input.cuda()
+        [input] = to_cuda_if_available([input])
+
         pred_strong = model(input.unsqueeze(0))
         pred_strong = pred_strong.cpu()
         pred_strong = pred_strong.squeeze(0).detach().numpy()
@@ -203,6 +207,9 @@ if __name__ == '__main__':
     create_folder(saved_model_dir)
     create_folder(saved_pred_dir)
 
+    # ##############
+    # DATA
+    # ##############
     dataset = DatasetDcase2019Task4(os.path.join(".."),
                                     base_feature_dir=os.path.join("..", "dataset", "features"),
                                     subpart_data=reduced_number_of_data,
@@ -272,6 +279,9 @@ if __name__ == '__main__':
     validation_dataset = DataLoadDf(validation_df, dataset.get_feature_file, many_hot_encoder.encode_strong_df,
                                     transform=transforms_valid)
 
+    # ##############
+    # Model
+    # ##############
     crnn_kwargs = {"n_in_channel": 1, "nclass":len(classes), "activation": "Relu",
                    "mode": "both", "dropout": cfg.conv_dropout, "max_frames": max_frames}
     crnn = CRNN(**crnn_kwargs)
@@ -301,10 +311,16 @@ if __name__ == '__main__':
 
     save_best_cb = SaveBest("sup")
 
+    # ##############
+    # Train
+    # ##############
     for epoch in range(cfg.n_epoch):
         global_step = 0
         crnn = crnn.train()
         crnn_ema = crnn_ema.train()
+
+        [crnn, crnn_ema] = to_cuda_if_available([crnn, crnn_ema])
+
         global_step = train(training_data, crnn, crnn_ema, optimizer, epoch, global_step)
 
         crnn = crnn.eval()
@@ -338,6 +354,9 @@ if __name__ == '__main__':
         state = torch.load(os.path.join(saved_model_dir, "baseline_best"))
         crnn.load(parameters=state["model"]["state_dict"])
 
+    # ##############
+    # Validation
+    # ##############
     predicitons_fname = os.path.join(saved_pred_dir, "baseline_validation.csv")
     predictions = get_predictions(crnn, validation_dataset, many_hot_encoder.decode_strong,
                                   save_predictions=predicitons_fname)
