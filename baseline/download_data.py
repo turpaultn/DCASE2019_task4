@@ -9,10 +9,6 @@
 from __future__ import print_function, absolute_import
 
 import os
-import warnings
-
-import librosa
-import soundfile
 from dcase_util.containers import AudioContainer
 from tqdm import tqdm
 from youtube_dl.utils import ExtractorError, DownloadError
@@ -23,9 +19,16 @@ from contextlib import closing
 from multiprocessing import Pool
 import functools
 import shutil
-import numpy as np
-from config import LOG
+import logging
 
+LOG = logging.getLogger('Download')
+file_h = logging.FileHandler('download.log')
+file_h.setLevel(logging.DEBUG)
+file_h.set_name('file_handler')
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+tool_formatter = logging.Formatter(' %(levelname)s - %(message)s')
+file_h.setFormatter(formatter)
+LOG.addHandler(file_h)
 
 TMP_FOLDER = "tmp/"
 
