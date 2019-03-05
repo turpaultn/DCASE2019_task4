@@ -1,3 +1,10 @@
+# -*- coding: utf-8 -*-
+#########################################################################
+# Initial software
+# Copyright Nicolas Turpault, Romain Serizel, Justin Salamon, Ankit Parag Shah, 2019, v1.0
+# This software is distributed under the terms of the License MIT
+#########################################################################
+
 from __future__ import print_function
 import numpy as np
 import os

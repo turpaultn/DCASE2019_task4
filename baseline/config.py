@@ -63,7 +63,8 @@ beta1_before_rampdown = 0.9
 beta1_after_rampdown = 0.5
 beta2_during_rampdup = 0.99
 beta2_after_rampup = 0.999
-
+weight_decay_during_rampup = 0.99
+weight_decay_after_rampup = 0.999
 
 decay_step = 100*1000
 decay_rate = 0.1
@@ -73,6 +74,8 @@ rampdown_length = 1000
 
 logit_distance_cost = 0.01
 
+
+max_consistency_cost = 100.
 consistency_weak = 1.
 consistency_strong = 1.
 consistency_rampup = 10
@@ -81,9 +84,9 @@ consistency_rampup = 10
 median_window = 20
 
 # Main
-num_workers = 3
-batch_size = 10
-n_epoch = 3
+num_workers = 12
+batch_size = 80
+n_epoch = 100
 
 checkpoint_epochs = 1
 

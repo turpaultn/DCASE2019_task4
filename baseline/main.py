@@ -22,7 +22,7 @@ from torch import nn
 from config import LOG
 
 
-def adjust_learning_rate(optimizer, epoch, step_in_epoch, total_steps_in_epoch, adjust_betas=True):
+def adjust_learning_rate(optimizer, epoch, step_in_epoch, total_steps_in_epoch):
     epoch = epoch + step_in_epoch / total_steps_in_epoch
     rampup_value = ramps.sigmoid_rampup(epoch, cfg.rampup_length)
     # LR warm-up to handle large minibatch sizes from https://arxiv.org/abs/1706.02677
@@ -30,6 +30,7 @@ def adjust_learning_rate(optimizer, epoch, step_in_epoch, total_steps_in_epoch, 
     rampdown_value = ramps.sigmoid_rampdown(epoch, cfg.rampdown_length)
     beta1 =  rampdown_value * cfg.beta1_before_rampdown + (1. - rampdown_value) * cfg.beta1_after_rampdown
     beta2 = (1. - rampup_value) * cfg.beta2_during_rampdup + rampup_value * cfg.beta2_after_rampup
+    weight_decay = (1 - rampup_value) * cfg.weight_decay_during_rampup + cfg.weight_decay_after_rampup * rampup_value
 
     # Cosine LR rampdown from https://arxiv.org/abs/1608.03983 (but one cycle only)
     if cfg.rampdown_length:
@@ -39,21 +40,7 @@ def adjust_learning_rate(optimizer, epoch, step_in_epoch, total_steps_in_epoch, 
     for param_group in optimizer.param_groups:
         param_group['lr'] = lr
         param_group['betas'] = (beta1, beta2)
-
-
-def adjust_betas(optimizer, epoch, step_in_epoch, total_steps_in_epoch):
-    epoch = epoch + step_in_epoch / total_steps_in_epoch
-
-    # LR warm-up to handle large minibatch sizes from https://arxiv.org/abs/1706.02677
-    lr = ramps.linear_rampup(epoch, cfg.rampup_length) * (cfg.lr - cfg.initial_lr) + cfg.initial_lr
-
-    # Cosine LR rampdown from https://arxiv.org/abs/1608.03983 (but one cycle only)
-    if cfg.rampdown_length:
-        assert cfg.rampdown_length >= cfg.n_epoch
-        lr *= ramps.cosine_rampdown(epoch, cfg.rampdown_length)
-
-    for param_group in optimizer.param_groups:
-        param_group['lr'] = lr
+        param_group['weight_decay'] = weight_decay
 
 
 def update_ema_variables(model, ema_model, alpha, global_step):
@@ -267,7 +254,8 @@ if __name__ == '__main__':
     train_synth_data.set_transform(transforms)
 
     concat_dataset = ConcatDataset([train_weak_data, unlabel_data, train_synth_data])
-    sampler = MultiStreamBatchSampler(concat_dataset, batch_sizes=[2, 2, 2])
+    sampler = MultiStreamBatchSampler(concat_dataset,
+                                      batch_sizes=[cfg.batch_size//4, cfg.batch_size//2, cfg.batch_size//4])
     training_data = DataLoader(concat_dataset, batch_sampler=sampler)
 
     transforms_valid = get_transforms(max_frames, scaler=scaler)
