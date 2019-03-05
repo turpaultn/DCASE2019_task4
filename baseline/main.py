@@ -204,7 +204,7 @@ if __name__ == '__main__':
     create_folder(saved_pred_dir)
 
     dataset = DatasetDcase2019Task4(os.path.join(".."),
-                                    base_feature_dir=os.path.join("..", "features"),
+                                    base_feature_dir=os.path.join("..", "dataset", "features"),
                                     subpart_data=reduced_number_of_data,
                                     save_log_feature=False)
 

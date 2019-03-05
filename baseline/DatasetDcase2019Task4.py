@@ -152,8 +152,8 @@ class DatasetDcase2019Task4:
         """
         base_filepath = os.path.splitext(filepath)[0]
         audio_dir = base_filepath.replace("metadata", "audio")
-        if audio_dir.endswith("test/test") or audio_dir.endswith("eval/eval"):
-            audio_dir = audio_dir[:-5]
+        if audio_dir.split('/')[-2] == 'validation':
+            audio_dir = '/'.join(audio_dir.split('/')[:-1])
         audio_dir = os.path.abspath(audio_dir)
         return audio_dir
 

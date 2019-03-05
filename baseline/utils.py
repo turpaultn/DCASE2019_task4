@@ -2,7 +2,6 @@ from __future__ import print_function
 
 import warnings
 
-import faiss
 import numpy as np
 import pandas as pd
 import soundfile
@@ -370,117 +369,6 @@ class EarlyStopping:
         return False
 
 
-class FaissIndexerL2:
-    """ Faiss indexer, fast implementation by facebook to get closest points or doing clustering with a big amount
-        of data
-        Here it is applied on segments of spectrograms
-    Args:
-        frames: int, (Default value = 9) number of frames taken for a sample
-    Attributes:
-        frames: int, number of frames taken for a sample
-        faiss_indexer: faiss.IndexFlatL2, indexer used
-        faiss_indexer_map: faiss.IndexIDMap, allows to take the index of the sample taken
-        dim_component: int, the number of component describing one sample
-
-    """
-    def __init__(self, dataloader):
-        self.faiss_indexer = None
-        self.faiss_indexer_map = None
-        self.dim_component = None
-        self.dataloader = dataloader
-
-    def initialize(self, dataloader):
-        """ Initialize the object
-        Args:
-            dataloader: DataLoadDf or Dataloader, the dataset object to give the nearest samples
-            The last two dimensions should be the one to search on.
-        """
-        sample, indexes = next(iter(dataloader))
-        if type(sample) in [tuple, list] and len(sample) == 2:
-            x, _ = sample
-        else:
-            x = sample
-        # sample is (..., time, frequency) features. So time is divided into frames
-        self.dim_component = x.shape[-2] * x.shape[-1]
-
-        self.faiss_indexer = faiss.IndexFlatL2(self.dim_component)
-        self.faiss_indexer_map = faiss.IndexIDMap(self.faiss_indexer)
-
-    def get_numpy_arr(self, sample):
-        if type(sample) in [tuple, list] and len(sample) == 2:
-            x, _ = sample
-        else:
-            x = sample
-        x_numpy = x.contiguous().view(x.shape[0], -1).data.numpy()
-        return x_numpy
-
-    def train(self):
-        """ Train the object on a dataset
-        Args:
-            dataload_df_no_frames: DataLoadDf, the dataset object where the segments are not divided into frames.
-        """
-        self.initialize(self.dataloader)
-        for sample, indexes in self.dataloader:
-            x_numpy = self.get_numpy_arr(sample)
-            indexes_numpy = indexes.data.numpy()
-            self.faiss_indexer_map.add_with_ids(x_numpy, indexes_numpy)
-
-    def search(self, sample, nb_search):
-        """ Search the nearest samples of a given sample
-        Args:
-            X: np.array, the sample
-            nb_search: int, the number of nearest samples to return
-
-        Returns:
-            tuple
-            (distance with the sample, indexes) return the index of nearest samples with the associated distance
-
-        """
-        if not type(sample) is np.ndarray:
-            X_ = self.get_numpy_arr(sample)
-        else:
-            X_ = sample
-        dist, near_ind = self.faiss_indexer_map.search(X_, nb_search)
-        return dist, near_ind
-
-    def search_frame(self, X, choice_nb=1):
-        dist, near_ind = self.faiss_indexer_map.search(X, choice_nb + 1)
-        if dist[0, 0] == 0:
-            ind = near_ind[0, 1:]
-        else:
-            ind = near_ind[0, :-1]
-        f_ind = np.random.choice(ind)
-        sample, _ = self.dataloader.dataset[f_ind]
-        if type(sample) in [tuple, list] and len(sample) == 2:
-            x, _ = sample
-        else:
-            x = sample
-        x = x.data.numpy().squeeze()
-        return x
-
-    # def search_batch(self, batch, choice_nb=1):
-    #     if not type(batch) is np.ndarray:
-    #         X = self.get_numpy_arr(batch)
-    #     else:
-    #         X = batch
-    #     dist, near_ind = self.faiss_indexer_map.search(X, choice_nb + 1)
-    #     for i in range(len(dist)):
-    #         if dist[i, 0] == 0:
-    #             ind = near_ind[i, 1:]
-    #         else:
-    #             ind = near_ind[i, :-1]
-    #         f_ind = np.random.choice(ind)
-    #         batch, _ = self.dataloader.dataset[f_ind]
-    #         if type(batch) in [tuple, list] and len(batch) == 2:
-    #             x, _ = batch
-    #         else:
-    #             x = batch
-    #         if i == 0:
-    #             final_data = x
-    #         else:
-    #             final_data = torch.cat([final_data, x])
-    #     return final_data
-
 def change_view_frames(array, nb_frames):
     array = array.view(-1, array.shape[1], nb_frames, array.shape[-1])
     return array
@@ -523,17 +411,16 @@ def save_model(state, filename=None, overwrite=True):
 # MANDATORY FOR get_class to work !!!!!!
 # It puts the name of the class in globals()
 # ###################
-from models.RNN import RNNClassif
-from models.CNN import CNN
-from models.CRNN import CRNN
-from torch.optim import Adam, Adadelta
-def get_class(name):
-    try:
-        cls = globals()[name]
-    except KeyError as ke:
-        raise KeyError("Impossible to load the object from a string, check the class name and "
-                       "if the situation is covered")
-    return cls
+# from models.CNN import CNN
+# from models.CRNN import CRNN
+# from torch.optim import Adam, Adadelta
+# def get_class(name):
+#     try:
+#         cls = globals()[name]
+#     except KeyError as ke:
+#         raise KeyError("Impossible to load the object from a string, check the class name and "
+#                        "if the situation is covered")
+#     return cls
 
 
 # def load_model(filename, ema=False, return_optimizer=False, return_state=False):
