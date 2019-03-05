@@ -71,3 +71,7 @@ In Proceedings of the 18th ISMIR Conference; 2017 oct 23-27, Suzhou, China. p. 4
 
 J. Salamon, D. MacConnell, M. Cartwright, P. Li, and J. P. Bello. Scaper: A library for soundscape synthesis and augmentation
 In IEEE Workshop on Applications of Signal Processing to Audio and Acoustics (WASPAA), New Paltz, NY, USA, Oct. 2017.
+
+Jort F. Gemmeke and Daniel P. W. Ellis and Dylan Freedman and Aren Jansen and Wade Lawrence and R. Channing Moore and Manoj Plakal and Marvin Ritter.
+Audio Set: An ontology and human-labeled dataset for audio events.
+In Proceedings IEEE ICASSP 2017, New Orleans, LA, 2017.
