@@ -1,11 +1,16 @@
 __pycache__/
 .idea/
 .DS_STORE
+
 *.log
+
+tmp/
 features/
 missing_files/
+
 baseline/stored_data/
 baseline/test/
+
 dataset/audio/
 dataset/check_files/
 dataset/add_missing_files.py
