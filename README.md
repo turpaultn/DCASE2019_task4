@@ -46,6 +46,10 @@ dataset root
 ```
 
 
+Synthetic data generation procedure
+The synthetic set is composed of 10 sec audio clips generated with [Scaper](https://github.com/justinsalamon/scaper). 
+The foreground events are obtained from [FSD](https://datasets.freesound.org/fsd/). Each event audio clip was verified manually to ensure that the sound quality and the event-to-background ratio were sufficient to be used an isolated event. We also verified that the event was actually dominant in the clip and we controlled if the event onset and offset are present in the clip. Each selected clip was then segmented when needed to remove silences before and after the event and between events when the file contained multiple occurrences of the event class.
+
 # Description
 
 This task is the follow-up to [DCASE 2018 task 4](../challenge2018/task-large-scale-weakly-labeled-semi-supervised-sound-event-detection). 
@@ -59,3 +63,15 @@ Further information on [dcase_website](http://dcase.community/challenge2019/task
 ## Authors
 
 Nicolas Turpault, Romain Serizel, Justin Salamon, Ankit Parag Shah, 2019 -- Present
+
+## References
+Fonseca E, Pons J, Favory X, Font F, Bogdanov D, Ferraro A, Oramas S, Porter A, Serra X. 
+Freesound datasets: a platform for the creation of open audio datasets. 
+In Proceedings of the 18th ISMIR Conference; 2017 oct 23-27, Suzhou, China. p. 486-93.
+
+J. Salamon, D. MacConnell, M. Cartwright, P. Li, and J. P. Bello. Scaper: A library for soundscape synthesis and augmentation
+In IEEE Workshop on Applications of Signal Processing to Audio and Acoustics (WASPAA), New Paltz, NY, USA, Oct. 2017.
+
+Jort F. Gemmeke and Daniel P. W. Ellis and Dylan Freedman and Aren Jansen and Wade Lawrence and R. Channing Moore and Manoj Plakal and Marvin Ritter.
+Audio Set: An ontology and human-labeled dataset for audio events.
+In Proceedings IEEE ICASSP 2017, New Orleans, LA, 2017.
