@@ -108,6 +108,25 @@ def intermediate_at_measures(encoded_ref, encoded_est):
     return tp, fp, fn, tn
 
 
+def get_event_list_current_file(df, fname):
+    """
+    Get list of events for a given filename
+    :param df: pd.DataFrame, the dataframe to search on
+    :param fname: the filename to extract the value from the dataframe
+    :return: list of events (dictionaries) for the given filename
+    """
+    event_file = df[df["filename"] == fname]
+    if len(event_file) == 1:
+        if pd.isna(event_file["event_label"].iloc[0]):
+            event_list_for_current_file = [{"filename": fname}]
+        else:
+            event_list_for_current_file = event_file.to_dict('records')
+    else:
+        event_list_for_current_file = event_file.to_dict('records')
+
+    return event_list_for_current_file
+
+
 def event_based_evaluation_df(reference, estimated, t_collar=0.200, percentage_of_length=0.2):
     """
     Calculate EventBasedMetric given a reference and estimated dataframe
@@ -232,22 +251,3 @@ def audio_tagging_results(reference, estimated):
 
     results_serie = pd.DataFrame(macro_res, index=mhe.labels)
     return results_serie[0]
-
-
-def get_event_list_current_file(df, fname):
-    """
-    Get list of events for a given filename
-    :param df: pd.DataFrame, the dataframe to search on
-    :param fname: the filename to extract the value from the dataframe
-    :return: list of events (dictionaries) for the given filename
-    """
-    event_file = df[df["filename"].str.contains(fname)]
-    if len(event_file) == 1:
-        if pd.isna(event_file["event_label"].iloc[0]):
-            event_list_for_current_file = [{"filename": fname}]
-        else:
-            event_list_for_current_file = event_file.to_dict('records')
-    else:
-        event_list_for_current_file = event_file.to_dict('records')
-
-    return event_list_for_current_file
