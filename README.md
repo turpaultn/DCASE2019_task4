@@ -46,9 +46,43 @@ dataset root
 ```
 
 
-Synthetic data generation procedure
+##### Synthetic data generation procedure (1.8Gb)
+
 The synthetic set is composed of 10 sec audio clips generated with [Scaper](https://github.com/justinsalamon/scaper). 
 The foreground events are obtained from [FSD](https://datasets.freesound.org/fsd/). Each event audio clip was verified manually to ensure that the sound quality and the event-to-background ratio were sufficient to be used an isolated event. We also verified that the event was actually dominant in the clip and we controlled if the event onset and offset are present in the clip. Each selected clip was then segmented when needed to remove silences before and after the event and between events when the file contained multiple occurrences of the event class.
+
+##### Real recordings (23.4Gb):
+Subset of [Audioset](https://research.google.com/audioset/index.html). The download/extraction process can take approximately 4 hours.
+If you experience problems during the download of this subset please contact the task organizers. 
+(Nicolas Turpault and Romain Serizel in priority)
+
+### Annotation format
+
+#### Weak annotations
+The weak annotations have been verified manually for a small subset of the training set. The weak annotations are provided in a tab separated csv file under the following format:
+
+```
+[filename (string)][tab][event_labels (strings)]
+```
+For example:
+```
+Y-BJNMHMZDcU_50.000_60.000.wav	Alarm_bell_ringing,Dog
+```
+
+#### Strong annotations
+Synthetic subset and validation set have strong annotations.
+
+The minimum length for an event is 250ms. The minimum duration of the pause between two events from the same class is 150ms. When the silence between two consecutive events from the same class was less than 150ms the events have been merged to a single event. 
+The strong annotations are provided in a tab separated csv file under the following format:
+
+```
+[filename (string)][tab][event onset time in seconds (float)][tab][event offset time in seconds (float)][tab][event_label (strings)]
+```
+For example:
+
+```
+YOTsn73eqbfc_10.000_20.000.wav	0.163	0.665	Alarm_bell_ringing
+```
 
 # Description
 
@@ -59,6 +93,7 @@ The challenge of exploring the possibility to **exploit a large amount of unbala
 **The labels in all the annotated subsets are verified and can be considered as reliable.**  An additional scientific question this task is aiming to investigate is whether we really need real but partially and weakly annotated data or is using synthetic data sufficient? or do we need both?
 
 Further information on [dcase_website](http://dcase.community/challenge2019/task-sound-event-detection-in-domestic-environments)
+
 
 ## Authors
 
