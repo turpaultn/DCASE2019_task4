@@ -163,7 +163,8 @@ def download(filenames, result_dir, n_jobs=1, chunk_size=10, base_dir_missing_fi
                 os.makedirs(base_dir_missing_files)
 
             missing_files.columns = ["filename", "error"]
-            missing_files.to_csv(os.path.join(base_dir_missing_files, "missing_files_" + result_dir.split('/')[-1]),
+            missing_files.to_csv(os.path.join(base_dir_missing_files,
+                                              "missing_files_" + result_dir.split('/')[-1] + ".csv"),
                                  index=False, sep="\t")
 
     except KeyboardInterrupt:
