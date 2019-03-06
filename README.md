@@ -17,8 +17,14 @@ A simplified installation procedure example is provide below for python 3.6 base
 ## Dataset
 **The dataset is composed of two subset that can be downloaded independently:**
 
-1. (Real recordings) launch `python download_data.py` (in `baseline/` folder)
+1. (Real recordings) launch `python download_data.py` (in `baseline/` folder).
 2. (Synthetic clips) download at : [synthetic_dataset](https://doi.org/10.5281/zenodo.2583796)
+
+**It is likely that you'll have download issues with the real recordings. 
+Don't hesitate to relaunch `download_data.py` once or twice.
+At the end of the download, please send a mail with the CSV files 
+created in the `missing_files` directory.** (in priority to [Nicolas Turpault](nicolas.turpault@inria.fr))
+
 
 You should have a development set structured in the following manner:
 
