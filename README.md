@@ -4,7 +4,7 @@ You can find discussion about the dcase challenge here: [dcase_discussions](http
 Challenge [website](http://dcase.community/challenge2019/)
 
 ## Updates
-6th march: add baseline/Logger.py and update README to send csv files.
+6th march: add baseline/Logger.py, update baseline/config.py and update README to send csv files.
 
 ## Dependencies
 
