@@ -87,7 +87,8 @@ def train(train_loader, model, ema_model, optimizer, epoch, global_step):
 
         # Weak BCE Loss
         # Trick to not take unlabeled data
-        weak_mask = target.mean(-1).mean(-1) != -1
+        # Todo figure out another way
+        weak_mask = target.max(-1)[0].max(-1)[0] != -1
         target_weak = target.max(-2)[0]
         weak_class_loss = class_criterion(weak_pred[weak_mask], target_weak[weak_mask])
         if i < 3:
