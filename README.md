@@ -4,7 +4,7 @@ You can find discussion about the dcase challenge here: [dcase_discussions](http
 Challenge [website](http://dcase.community/challenge2019/)
 
 ## Updates
-6th march: add baseline/Logger.py and update README to send csv files.
+6th march: add baseline/Logger.py, update baseline/config.py and update README to send csv files.
 
 ## Dependencies
 
@@ -26,7 +26,7 @@ A simplified installation procedure example is provide below for python 3.6 base
 **It is likely that you'll have download issues with the real recordings. 
 Don't hesitate to relaunch `download_data.py` once or twice.
 At the end of the download, please send a mail with the CSV files 
-created in the `missing_files` directory.** (in priority to Nicolas Turpault)
+created in the `missing_files` directory.** (in priority to Nicolas Turpault and Romain Serizel)
 
 
 You should have a development set structured in the following manner:
