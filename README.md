@@ -26,7 +26,7 @@ A simplified installation procedure example is provide below for python 3.6 base
 **It is likely that you'll have download issues with the real recordings. 
 Don't hesitate to relaunch `download_data.py` once or twice.
 At the end of the download, please send a mail with the CSV files 
-created in the `missing_files` directory.** (in priority to [Nicolas Turpault](nicolas.turpault@inria.fr))
+created in the `missing_files` directory.** (in priority to Nicolas Turpault)
 
 
 You should have a development set structured in the following manner:
