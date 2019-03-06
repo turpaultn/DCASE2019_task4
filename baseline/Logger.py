@@ -22,7 +22,7 @@ def create_logger(logger_name, log_file):
     file_h.setLevel(logging.DEBUG)
     file_h.set_name('file_handler')
     terminal_h = logging.StreamHandler(sys.stdout)
-    terminal_h.setLevel(logging.INFO)
+    terminal_h.setLevel(logging.DEBUG)
     terminal_h.set_name('stdout')
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     tool_formatter = logging.Formatter(' %(levelname)s - %(message)s')

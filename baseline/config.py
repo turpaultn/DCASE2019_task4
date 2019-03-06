@@ -37,8 +37,8 @@ logit_distance_cost = 0.01
 
 train_iter_count = 20000
 
-rampup_length = int(0.5 * train_iter_count)
-rampdown_length = int(0.1 * train_iter_count)
+rampup_length = 0 # int(0.5 * train_iter_count)
+rampdown_length = 0 # int(0.1 * train_iter_count)
 
 max_consistency_cost = 100.
 max_learning_rate = 0.001
@@ -47,11 +47,15 @@ consistency_strong = 1.
 consistency_rampup = 10
 
 
+
+
+
+
 median_window = 20
 
 # Main
 num_workers = 12
-batch_size = 80
+batch_size = 4
 n_epoch = 100
 
 checkpoint_epochs = 1

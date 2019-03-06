@@ -243,7 +243,7 @@ class DatasetDcase2019Task4:
         """
         t1 = time.time()
         df_meta = self.get_df_from_meta(csv_audio, subpart_data)
-        print("Total file number: %d" % df_meta.shape[0])
+        LOG.info("{} Total file number: {}".format(csv_audio, len(df_meta.filename.unique())))
 
         for ind, wav_name in enumerate(df_meta.filename.unique()):
             if ind % 500 == 0:

@@ -23,12 +23,9 @@ class GLU(nn.Module):
 
 class CRNN(nn.Module):
 
-    def __init__(self, n_in_channel, nclass, activation="Relu", mode="strong", dropout=0,
-                 train_cnn=True, max_frames=None, rnn_type='BGRU', n_layers_RNN=1, dropout_recurrent=0, **kwargs):
+    def __init__(self, n_in_channel, nclass, activation="Relu", dropout=0,
+                 train_cnn=True, rnn_type='BGRU', n_layers_RNN=1, dropout_recurrent=0, **kwargs):
         super(CRNN, self).__init__()
-
-        self.mode = mode
-        self.max_frames = max_frames
 
         self.cnn = CNN(n_in_channel, activation, dropout, **kwargs)
         if not train_cnn:
@@ -81,9 +78,6 @@ class CRNN(nn.Module):
         else:
             x = x.squeeze(-1)
             x = x.permute(0, 2, 1)  # [bs, frames, chan]
-
-        if self.max_frames is not None:
-            x = x.contiguous().view(-1, self.max_frames, chan*freq)
 
         # rnn features
         x = self.rnn(x)

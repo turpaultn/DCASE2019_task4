@@ -51,6 +51,8 @@ def train(train_loader, model, ema_model, optimizer, epoch, global_step):
 
     meters = AverageMeterSet()
 
+    train_iter_count = cfg.n_epoch * len(train_loader)
+    LOG.debug(len(train_loader))
     start = time.time()
     for i, (input, ema_input, target) in enumerate(train_loader):
         e_step = epoch + i / len(train_loader)
@@ -59,7 +61,7 @@ def train(train_loader, model, ema_model, optimizer, epoch, global_step):
         else:
             rampup_value = 1.0
 
-        if global_step > (cfg.train_iter_count - cfg.rampdown_length):
+        if global_step > (train_iter_count - cfg.rampdown_length):
             rampdown_value = ramps.sigmoid_rampdown(e_step, cfg.rampdown_length)
         else:
             rampdown_value = 1.0
@@ -146,7 +148,8 @@ def train(train_loader, model, ema_model, optimizer, epoch, global_step):
         'Weak Cons {meters[weak_cons_loss]:.4f}\t'
         'Srtong Cons {meters[strong_cons_loss]:.4f}\t'
         'EMA loss {meters[weak_ema_class_loss]:.4f}\t'
-        'Strong EMA loss {meters[strong_ema_class_loss]:.4f}\t'.format(
+        'Strong EMA loss {meters[strong_ema_class_loss]:.4f}\t'
+        ''.format(
             epoch, meters=meters))
     return global_step
 
@@ -177,7 +180,7 @@ def get_predictions(model, valid_dataset, decoder, in_seconds=True, save_predict
         prediction_df.offset = prediction_df.offset / (cfg.sample_rate / cfg.hop_length)
     if save_predictions is not None:
         LOG.info("Saving predictions at: {}".format(save_predictions))
-        prediction_df.to_csv(save_predictions)
+        prediction_df.to_csv(save_predictions, index=False)
     return prediction_df
 
 
@@ -260,6 +263,8 @@ if __name__ == '__main__':
                                       batch_sizes=[cfg.batch_size//4, cfg.batch_size//2, cfg.batch_size//4])
     training_data = DataLoader(concat_dataset, batch_sampler=sampler)
 
+    # training_data = DataLoader(train_weak_data, batch_size=cfg.batch_size)
+
     transforms_valid = get_transforms(max_frames, scaler=scaler)
     valid_synth_data = DataLoadDf(valid_synth_df, dataset.get_feature_file, many_hot_encoder.encode_strong_df,
                                   transform=transforms_valid)
@@ -272,7 +277,7 @@ if __name__ == '__main__':
     # Model
     # ##############
     crnn_kwargs = {"n_in_channel": 1, "nclass":len(classes), "activation": "Relu",
-                   "mode": "both", "dropout": cfg.conv_dropout, "max_frames": max_frames}
+                   "dropout": cfg.conv_dropout}
     crnn = CRNN(**crnn_kwargs)
     crnn_ema = CRNN(**crnn_kwargs)
 
@@ -304,8 +309,7 @@ if __name__ == '__main__':
     # Train
     # ##############
     global_step = 0
-    epoch = 0
-    while global_step < cfg.train_iter_count:
+    for epoch in range(cfg.n_epoch):
         crnn = crnn.train()
         crnn_ema = crnn_ema.train()
 
@@ -339,7 +343,6 @@ if __name__ == '__main__':
             if save_best_cb.apply(global_valid):
                 model_fname = os.path.join(saved_model_dir, "baseline_best")
                 torch.save(state, model_fname)
-        epoch += 1
 
     if cfg.save_best:
         state = torch.load(os.path.join(saved_model_dir, "baseline_best"))
