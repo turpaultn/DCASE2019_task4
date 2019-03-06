@@ -12,7 +12,11 @@ from torch import nn
 
 
 class ManyHotEncoder:
-    """ Encode labels into numpy arrays where 1 correspond to presence of the class and 0 absence.
+    """"
+        Adapted after DecisionEncoder.find_contiguous_regions method in
+        https://github.com/DCASE-REPO/dcase_util/blob/master/dcase_util/data/decisions.py
+
+        Encode labels into numpy arrays where 1 correspond to presence of the class and 0 absence.
         Multiple 1 can appear on the same line, it is for multi label problem.
     Args:
         labels: list, the classes which will be encoded
