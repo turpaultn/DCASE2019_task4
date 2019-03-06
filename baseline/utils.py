@@ -9,6 +9,7 @@ import os
 import librosa
 import torch
 from torch import nn
+from dcase_util.data import DecisionEncoder
 
 
 class ManyHotEncoder:
@@ -140,22 +141,7 @@ class ManyHotEncoder:
         """
         result_labels = []
         for i, label_column in enumerate(labels.T):
-            # Find the changes in the activity_array
-            change_indices = np.logical_xor(label_column[1:], label_column[:-1]).nonzero()[0]
-
-            # Shift change_index with one, focus on frame after the change.
-            change_indices += 1
-
-            if label_column[0]:
-                # If the first element of activity_array is True add 0 at the beginning
-                change_indices = np.r_[0, change_indices]
-
-            if label_column[-1]:
-                # If the last element of activity_array is True, the stop indices is the length of segment
-                change_indices = np.r_[change_indices, label_column.size]
-
-            # Reshape the result into two columns
-            change_indices = change_indices.reshape((-1, 2))
+            change_indices = DecisionEncoder.find_contiguous_regions(label_column)
 
             # append [label, onset, offset] in the result list
             for row in change_indices:
