@@ -19,16 +19,7 @@ from contextlib import closing
 from multiprocessing import Pool
 import functools
 import shutil
-import logging
-
-LOG = logging.getLogger('Download')
-file_h = logging.FileHandler('download.log')
-file_h.setLevel(logging.DEBUG)
-file_h.set_name('file_handler')
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-tool_formatter = logging.Formatter(' %(levelname)s - %(message)s')
-file_h.setFormatter(formatter)
-LOG.addHandler(file_h)
+from Logger import LOG
 
 TMP_FOLDER = "tmp/"
 
@@ -118,7 +109,7 @@ def download_file(result_dir, filename):
         return [filename, "Index Error"]
 
 
-def download(filenames, result_dir, n_jobs=1, chunk_size=10, dir_missing_files=".."):
+def download(filenames, result_dir, n_jobs=1, chunk_size=10, base_dir_missing_files=".."):
     """ download files in parallel from youtube given a csv file listing files to download. It also stores not downloaded
     files with their associated error in "missing_files_[csv_file].csv"
 
@@ -167,12 +158,12 @@ def download(filenames, result_dir, n_jobs=1, chunk_size=10, dir_missing_files="
         # Store files which gave error
         missing_files = pd.DataFrame(non_existing_files).dropna()
         if not missing_files.empty:
-            dir_missing_files = os.path.join(dir_missing_files, "missing_files")
-            if not os.path.exists(dir_missing_files):
-                os.makedirs(dir_missing_files)
+            base_dir_missing_files = os.path.join(base_dir_missing_files, "missing_files")
+            if not os.path.exists(base_dir_missing_files):
+                os.makedirs(base_dir_missing_files)
 
             missing_files.columns = ["filename", "error"]
-            missing_files.to_csv(os.path.join(dir_missing_files, "missing_files_" + result_dir.split('/')[-1]),
+            missing_files.to_csv(os.path.join(base_dir_missing_files, "missing_files_" + result_dir.split('/')[-1]),
                                  index=False, sep="\t")
 
     except KeyboardInterrupt:
@@ -199,12 +190,13 @@ class MyLogger(object):
 
 
 if __name__ == "__main__":
-
+    base_missing_files_folder = ".."
     dataset_folder = os.path.join("..", "dataset")
 
     LOG.info("Download_data")
-    LOG.info("Once database is downloaded, do not forget to check your missing_files")
+    LOG.info("\n\nOnce database is downloaded, do not forget to check your missing_files\n\n")
 
+    LOG.info("You can change N_JOBS and CHUNK_SIZE to increase the download with more processes.")
     # Modify it with the number of process you want, but be careful, youtube can block you if you put too many.
     N_JOBS = 3
 
@@ -218,7 +210,8 @@ if __name__ == "__main__":
     # read metadata file and get only one filename once
     df = pd.read_csv(test, header=0, sep='\t')
     filenames_test = df["filename"].drop_duplicates()
-    download(filenames_test, result_dir, n_jobs=N_JOBS, chunk_size=CHUNK_SIZE)
+    download(filenames_test, result_dir, n_jobs=N_JOBS, chunk_size=CHUNK_SIZE,
+             base_dir_missing_files=base_missing_files_folder)
 
     LOG.info("Train, weak data")
     train_weak = os.path.join(dataset_folder, "metadata", "train", "weak.csv")
@@ -226,7 +219,8 @@ if __name__ == "__main__":
     # read metadata file and get only one filename once
     df = pd.read_csv(train_weak, header=0, sep='\t')
     filenames_weak = df["filename"].drop_duplicates()
-    download(filenames_weak, result_dir, n_jobs=N_JOBS, chunk_size=CHUNK_SIZE)
+    download(filenames_weak, result_dir, n_jobs=N_JOBS, chunk_size=CHUNK_SIZE,
+             base_dir_missing_files=base_missing_files_folder)
 
     LOG.info("Train, unlabel in domain data")
     train_unlabel_in_domain = os.path.join(dataset_folder, "metadata", "train", "unlabel_in_domain.csv")
@@ -234,6 +228,7 @@ if __name__ == "__main__":
     # read metadata file and get only one filename once
     df = pd.read_csv(train_unlabel_in_domain, header=0, sep='\t')
     filenames_unlabel_in_domain = df["filename"].drop_duplicates()
-    download(filenames_unlabel_in_domain, result_dir, n_jobs=N_JOBS, chunk_size=CHUNK_SIZE)
+    download(filenames_unlabel_in_domain, result_dir, n_jobs=N_JOBS, chunk_size=CHUNK_SIZE,
+             base_dir_missing_files=base_missing_files_folder)
 
     LOG.info("###### DONE #######")
