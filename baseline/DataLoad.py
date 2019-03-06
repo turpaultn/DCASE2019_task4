@@ -11,7 +11,7 @@ from torch.utils.data import Dataset
 from torch.utils.data.sampler import Sampler
 
 from utils import pad_trunc_seq
-from config import LOG
+from Logger import LOG
 
 torch.manual_seed(0)
 random.seed(0)

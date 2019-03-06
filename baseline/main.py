@@ -19,7 +19,7 @@ import config as cfg
 from utils import ManyHotEncoder, AverageMeterSet, create_folder, SaveBest, to_cuda_if_available
 import ramps
 from torch import nn
-from config import LOG
+from Logger import LOG
 
 
 def adjust_learning_rate(optimizer, rampup_value, rampdown_value):

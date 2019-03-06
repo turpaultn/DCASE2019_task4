@@ -13,7 +13,7 @@ import time
 import pandas as pd
 
 import config as cfg
-from config import LOG
+from Logger import LOG
 from download_data import download
 from utils import create_folder, read_audio
 
