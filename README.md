@@ -3,6 +3,9 @@
 You can find discussion about the dcase challenge here: [dcase_discussions](https://groups.google.com/forum/#!forum/dcase-discussions).
 Challenge [website](http://dcase.community/challenge2019/)
 
+## Updates
+6th march: add baseline/Logger.py and update README to send csv files.
+
 ## Dependencies
 
 Python >= 3.6, pytorch >= 1.0, cudatoolkit=9.0, pandas >= 0.24.1, scipy >= 1.2.1, pysoundfile >= 0.10.2,
