@@ -3,6 +3,7 @@ import logging
 import numpy as np
 import torch
 import config as cfg
+import json
 
 logger = logging.getLogger("sed")
 
@@ -103,6 +104,22 @@ class Scaler(object):
             return torch.Tensor(batch_)
         else:
             return (batch - self.mean_) / self.std_
+
+    def save(self, path):
+        if type(self.mean_) is not np.ndarray:
+            raise NotImplementedError("Save scaler only implemented for numpy array means_")
+
+        dict_save = {"mean_": self.mean_.tolist(),
+                     "mean_of_square_": self.mean_of_square_.tolist()}
+        with open(path, "w") as f:
+            json.dump(dict_save, f)
+
+    def load(self, path):
+        with open(path, "r") as f:
+            dict_save = json.load(f)
+
+        self.mean_ = np.array(dict_save["mean_"])
+        self.mean_of_square_ = np.array(dict_save["mean_of_square_"])
 
 
 if __name__ == '__main__':

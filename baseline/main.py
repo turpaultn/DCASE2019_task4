@@ -188,6 +188,24 @@ def get_predictions(model, valid_dataset, decoder, in_seconds=True, save_predict
     return prediction_df
 
 
+def get_transforms(frames, scaler=None, add_axis_conv=True, augment_type=None):
+    transf = []
+    unsqueeze_axis = None
+    if add_axis_conv:
+        unsqueeze_axis = 0
+
+    # Todo, add other augmentations
+    if augment_type is not None:
+        if augment_type == "noise":
+            transf.append(AugmentGaussianNoise(mean=0., std=0.5))
+
+    transf.extend([ApplyLog(), PadOrTrunc(nb_frames=frames), ToTensor(unsqueeze_axis=unsqueeze_axis)])
+    if scaler is not None:
+        transf.append(Normalize(scaler=scaler))
+
+    return Compose(transf)
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="")
     parser.add_argument('--subpart_data', type=int, default=None, dest="subpart_data")
@@ -197,8 +215,11 @@ if __name__ == '__main__':
     LOG.info("subpart_data = " + str(reduced_number_of_data))
     max_frames = cfg.max_frames
 
-    saved_model_dir = "stored_data/model"
-    saved_pred_dir = "stored_data/predictions"
+    store_dir = "stored_data"
+    saved_model_dir = os.path.join(store_dir, "model")
+    saved_pred_dir = os.path.join(store_dir, "predictions")
+    scaler_path = os.path.join(store_dir, "scaler")
+    create_folder(store_dir)
     create_folder(saved_model_dir)
     create_folder(saved_pred_dir)
 
@@ -210,23 +231,6 @@ if __name__ == '__main__':
                                     subpart_data=reduced_number_of_data,
                                     save_log_feature=False)
 
-    def get_transforms(frames, scaler=None, add_axis_conv=True, augment_type=None):
-        transf = []
-        unsqueeze_axis = None
-        if add_axis_conv:
-            unsqueeze_axis = 0
-
-        # Todo, add other augmentations
-        if augment_type is not None:
-            if augment_type == "noise":
-                transf.append(AugmentGaussianNoise(mean=0., std=0.5))
-
-        transf.extend([ApplyLog(), PadOrTrunc(nb_frames=frames), ToTensor(unsqueeze_axis=unsqueeze_axis)])
-        if scaler is not None:
-            transf.append(Normalize(scaler=scaler))
-
-        return Compose(transf)
-
     weak_df = dataset.intialize_and_get_df(cfg.weak, reduced_number_of_data)
     unlabel_df = dataset.intialize_and_get_df(cfg.unlabel, reduced_number_of_data)
     synthetic_df = dataset.intialize_and_get_df(cfg.synthetic, reduced_number_of_data, download=False)
@@ -237,15 +241,20 @@ if __name__ == '__main__':
 
     transforms = get_transforms(max_frames)
 
-    train_weak_df = weak_df.sample(frac=0.8, random_state=10).reset_index(drop=True)
+    # Divide weak in train and valid
+    train_weak_df = weak_df.sample(frac=0.8, random_state=26)
     valid_weak_df = weak_df.drop(train_weak_df.index).reset_index(drop=True)
+    train_weak_df = train_weak_df.reset_index(drop=True)
 
     LOG.debug(valid_weak_df)
 
-    filenames_train = synthetic_df.filename.drop_duplicates().sample(frac=0.8, random_state=10)
+    # Divide synthetic in train and valid
+    filenames_train = synthetic_df.filename.drop_duplicates().sample(frac=0.8, random_state=26)
     train_synth_df = synthetic_df[synthetic_df.filename.isin(filenames_train)]
     valid_synth_df = synthetic_df.drop(train_synth_df.index).reset_index(drop=True)
 
+    # Put train_synth in frames so many_hot_encoder can work.
+    #  Not doing it for valid, because not using labels (when prediction) and event based metric expect sec.
     train_synth_df.onset = train_synth_df.onset * cfg.sample_rate // cfg.hop_length
     train_synth_df.offset = train_synth_df.offset * cfg.sample_rate // cfg.hop_length
 
@@ -259,7 +268,11 @@ if __name__ == '__main__':
                                   transform=transforms)
 
     scaler = Scaler()
-    scaler.calculate_scaler(ConcatDataset([train_weak_data, unlabel_data]))
+    if not os.path.exists(scaler_path):
+        scaler.calculate_scaler(ConcatDataset([train_weak_data, train_synth_data]))
+        scaler.save(scaler_path)
+    else:
+        scaler.load(scaler_path)
     LOG.debug(scaler.mean_)
 
     transforms = get_transforms(max_frames, scaler, augment_type="noise")
@@ -268,11 +281,9 @@ if __name__ == '__main__':
     train_synth_data.set_transform(transforms)
 
     concat_dataset = ConcatDataset([train_weak_data, unlabel_data, train_synth_data])
-    # sampler = MultiStreamBatchSampler(concat_dataset,
-    #                                   batch_sizes=[cfg.batch_size//4, cfg.batch_size//2, cfg.batch_size//4])
-    # training_data = DataLoader(concat_dataset, batch_sampler=sampler)
-
-    training_data = DataLoader(train_weak_data, batch_size=cfg.batch_size)
+    sampler = MultiStreamBatchSampler(concat_dataset,
+                                      batch_sizes=[cfg.batch_size//4, cfg.batch_size//2, cfg.batch_size//4])
+    training_data = DataLoader(concat_dataset, batch_sampler=sampler)
 
     transforms_valid = get_transforms(max_frames, scaler=scaler)
     valid_synth_data = DataLoadDf(valid_synth_df, dataset.get_feature_file, many_hot_encoder.encode_strong_df,
