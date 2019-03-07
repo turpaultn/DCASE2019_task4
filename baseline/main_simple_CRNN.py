@@ -221,7 +221,8 @@ if __name__ == '__main__':
         crnn = CRNN(**crnn_kwargs)
         crnn.load(parameters=state["model"]["state_dict"])
     else:
-        crnn_kwargs = {"n_in_channel": 1, "nclass":len(classes), "n_RNN_cell":128, "activation": cfg.activation,
+        crnn_kwargs = {"n_in_channel": 1, "nclass":len(classes), "attention":True, "n_RNN_cell":128,
+                       "activation": cfg.activation,
                        "dropout": cfg.dropout, "kernel_size": 7 * [3], "padding": 7 * [1], "stride": 7 * [1],
                        "nb_filters": [16, 32, 64, 128, 128, 128], "pooling": list(3*((2,2),) + 4*((1,2),))}
         crnn = CRNN(**crnn_kwargs)

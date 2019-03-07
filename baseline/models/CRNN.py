@@ -28,7 +28,7 @@ class CRNN(nn.Module):
         self.sigmoid = nn.Sigmoid()
         if self.attention:
             self.dense_softmax = nn.Linear(n_RNN_cell*2, nclass)
-            self.softmax = nn.Softmax()
+            self.softmax = nn.Softmax(dim=-1)
 
     def load_cnn(self, parameters):
         self.cnn.load(parameters)
@@ -77,7 +77,7 @@ class CRNN(nn.Module):
         if self.attention:
             sof = self.dense_softmax(x)  # [bs, frames, nclass]
             sof = self.softmax(sof)
-            sof[sof < 1e-7] = 1e-7
+            sof = torch.clamp(sof, min=1e-7, max=1)
             weak = (strong * sof).sum(1) / sof.sum(1)   # [bs, nclass]
         else:
             weak = strong.mean(1)
