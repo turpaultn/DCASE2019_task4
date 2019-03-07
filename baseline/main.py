@@ -52,9 +52,9 @@ def train(train_loader, model, ema_model, optimizer, epoch, global_step):
     meters = AverageMeterSet()
 
     train_iter_count = cfg.n_epoch * len(train_loader)
-    LOG.debug(len(train_loader))
+    LOG.debug("Nb batches: {}".format(len(train_loader)))
     start = time.time()
-    for i, (input, ema_input, target) in enumerate(train_loader):
+    for i, (batch_input, ema_batch_input, target) in enumerate(train_loader):
         e_step = epoch + i / len(train_loader)
         if global_step < cfg.rampup_length:
             rampup_value = ramps.sigmoid_rampup(e_step, cfg.rampup_length)
@@ -66,69 +66,71 @@ def train(train_loader, model, ema_model, optimizer, epoch, global_step):
         else:
             rampdown_value = 1.0
 
-        adjust_learning_rate(optimizer, rampup_value, rampdown_value)
+        # adjust_learning_rate(optimizer, rampup_value, rampdown_value)
         meters.update('lr', optimizer.param_groups[0]['lr'])
 
         labeled_minibatch_size = target.data.ne(-1).sum()
         assert labeled_minibatch_size > 0
         meters.update('labeled_minibatch_size', labeled_minibatch_size)
 
-        [input, ema_input, target] = to_cuda_if_available([input, ema_input, target])
-
+        [batch_input, ema_batch_input, target] = to_cuda_if_available([batch_input, ema_batch_input, target])
+        LOG.debug(batch_input.mean())
         # Outputs
-        ema_model_out = ema_model(ema_input)
-        ema_model_out = ema_model_out.detach()
-        strong_pred_ema = ema_model_out
-        weak_pred_ema = torch.mean(ema_model_out, 1)
+        # ema_model_out = ema_model(ema_batch_input)
+        # ema_model_out = ema_model_out.detach()
+        # strong_pred_ema = ema_model_out
+        # weak_pred_ema = torch.mean(ema_model_out, 1)
 
-        model_out = model(input)
+        model_out = model(batch_input)
         strong_pred = model_out
         weak_pred = torch.mean(model_out, 1)
 
         # Weak BCE Loss
         # Trick to not take unlabeled data
         # Todo figure out another way
-        weak_mask = target.max(-1)[0].max(-1)[0] != -1
+        # weak_mask = target.max(-1)[0].max(-1)[0] != -1
         target_weak = target.max(-2)[0]
-        weak_class_loss = class_criterion(weak_pred[weak_mask], target_weak[weak_mask])
-        if i < 3:
-            LOG.debug("target: {}".format(target.mean(-2)))
-            LOG.debug("mask: {}".format(weak_mask))
-            LOG.debug("Target_weak: {}".format(target_weak))
-            LOG.debug("Target_weak mask: {}".format(target_weak[weak_mask]))
-            LOG.debug(weak_class_loss)
-        meters.update('weak_class_loss', weak_class_loss.item())
+        # weak_class_loss = class_criterion(weak_pred[weak_mask], target_weak[weak_mask])
+        # if i == 1:
+        #     LOG.debug("target: {}".format(target.mean(-2)))
+        #     LOG.debug("mask: {}".format(weak_mask))
+        #     LOG.debug("Target_weak: {}".format(target_weak))
+        #     LOG.debug("Target_weak mask: {}".format(target_weak[weak_mask]))
+        #     LOG.debug(weak_class_loss)
+        # meters.update('weak_class_loss', weak_class_loss.item())
+        loss = class_criterion(weak_pred, target_weak)
 
-        ema_class_loss = class_criterion(weak_pred_ema[weak_mask], target_weak[weak_mask])
-        meters.update('weak_ema_class_loss', ema_class_loss.item())
+        # ema_class_loss = class_criterion(weak_pred_ema[weak_mask], target_weak[weak_mask])
+        # meters.update('weak_ema_class_loss', ema_class_loss.item())
+        #
+        # loss = weak_class_loss
 
-        loss = weak_class_loss
-
-        # Strong BCE loss
-        strong_size = train_loader.batch_sampler.batch_sizes[-1]
-        strong_class_loss = class_criterion(strong_pred[-strong_size:], target[-strong_size:])
-        meters.update('strong_class_loss', strong_class_loss.item())
-
-        strong_ema_class_loss = class_criterion(strong_pred_ema[-strong_size:], target[-strong_size:])
-        meters.update('strong_ema_class_loss', strong_ema_class_loss.item())
-
-        loss += strong_class_loss
-
-        # Consistency losses
-        consistency_cost = cfg.max_consistency_cost * rampup_value
-        if cfg.consistency_weak:
-            meters.update('cons_weight_weak', consistency_cost)
-            consistency_loss_weak = consistency_cost * consistency_criterion_weak(weak_pred, weak_pred_ema)
-            meters.update('weak_cons_loss', consistency_loss_weak.item())
-            loss += consistency_loss_weak
-
-        if cfg.consistency_strong:
-            meters.update('cons_weight', consistency_cost)
-            consistency_loss_strong = consistency_cost * consistency_criterion_strong(strong_pred, strong_pred_ema)
-            meters.update('strong_cons_loss', consistency_loss_strong.item())
-            loss += consistency_loss_strong
-
+        # # Strong BCE loss
+        # strong_size = train_loader.batch_sampler.batch_sizes[-1]
+        # strong_class_loss = class_criterion(strong_pred[-strong_size:], target[-strong_size:])
+        # meters.update('strong_class_loss', strong_class_loss.item())
+        #
+        # strong_ema_class_loss = class_criterion(strong_pred_ema[-strong_size:], target[-strong_size:])
+        # meters.update('strong_ema_class_loss', strong_ema_class_loss.item())
+        #
+        # loss += strong_class_loss
+        #
+        # # Consistency losses
+        # consistency_cost = cfg.max_consistency_cost * rampup_value
+        # if cfg.consistency_weak:
+        #     meters.update('cons_weight_weak', consistency_cost)
+        #     consistency_loss_weak = consistency_cost * consistency_criterion_weak(weak_pred, weak_pred_ema)
+        #     meters.update('weak_cons_loss', consistency_loss_weak.item())
+        #     loss += consistency_loss_weak
+        #
+        # if cfg.consistency_strong:
+        #     meters.update('cons_weight', consistency_cost)
+        #     consistency_loss_strong = consistency_cost * consistency_criterion_strong(strong_pred, strong_pred_ema)
+        #     meters.update('strong_cons_loss', consistency_loss_strong.item())
+        #     loss += consistency_loss_strong
+        #
         assert not (np.isnan(loss.item()) or loss.item() > 1e5), 'Loss explosion: {}'.format(loss.item())
+        assert not loss.item() < 0, 'Loss problem, cannot be negative'
         meters.update('loss', loss.item())
 
         # compute gradient and do optimizer step
@@ -136,7 +138,7 @@ def train(train_loader, model, ema_model, optimizer, epoch, global_step):
         loss.backward()
         optimizer.step()
         global_step += 1
-        update_ema_variables(model, ema_model, 0.999, global_step)
+        # update_ema_variables(model, ema_model, 0.999, global_step)
 
     meters.update('epoch_time', time.time() - start)
 
@@ -144,12 +146,13 @@ def train(train_loader, model, ema_model, optimizer, epoch, global_step):
         'Epoch: {}\t'
         'Time {meters[epoch_time]:.2f}\t'
         'LR {meters[lr]:.2E}\t'
-        'Weak_loss {meters[weak_class_loss]:.4f}\t'
-        'Strong_loss {meters[strong_class_loss]:.4f}\t'
-        'Weak Cons {meters[weak_cons_loss]:.4f}\t'
-        'Srtong Cons {meters[strong_cons_loss]:.4f}\t'
-        'EMA loss {meters[weak_ema_class_loss]:.4f}\t'
-        'Strong EMA loss {meters[strong_ema_class_loss]:.4f}\t'
+        'Loss {meters[loss]:.4f}\t'
+        # 'Weak_loss {meters[weak_class_loss]:.4f}\t'
+        # 'Strong_loss {meters[strong_class_loss]:.4f}\t'
+        # 'Weak Cons {meters[weak_cons_loss]:.4f}\t'
+        # 'Srtong Cons {meters[strong_cons_loss]:.4f}\t'
+        # 'EMA loss {meters[weak_ema_class_loss]:.4f}\t'
+        # 'Strong EMA loss {meters[strong_ema_class_loss]:.4f}\t'
         ''.format(
             epoch, meters=meters))
     return global_step
@@ -170,8 +173,8 @@ def get_predictions(model, valid_dataset, decoder, in_seconds=True, save_predict
         pred = pd.DataFrame(pred, columns=["event_label", "onset", "offset"])
         pred["filename"] = valid_dataset.df.iloc[i]["filename"]
         if i == 0:
-            LOG.debug(pred)
-            LOG.debug(pred_strong)
+            LOG.debug("predictions: \n{}".format(pred))
+            LOG.debug("predictions strong: \n{}".format(pred_strong))
             prediction_df = pred.copy()
         else:
             prediction_df = prediction_df.append(pred)
@@ -260,11 +263,11 @@ if __name__ == '__main__':
     train_synth_data.set_transform(transforms)
 
     concat_dataset = ConcatDataset([train_weak_data, unlabel_data, train_synth_data])
-    sampler = MultiStreamBatchSampler(concat_dataset,
-                                      batch_sizes=[cfg.batch_size//4, cfg.batch_size//2, cfg.batch_size//4])
-    training_data = DataLoader(concat_dataset, batch_sampler=sampler)
+    # sampler = MultiStreamBatchSampler(concat_dataset,
+    #                                   batch_sizes=[cfg.batch_size//4, cfg.batch_size//2, cfg.batch_size//4])
+    # training_data = DataLoader(concat_dataset, batch_sampler=sampler)
 
-    # training_data = DataLoader(train_weak_data, batch_size=cfg.batch_size)
+    training_data = DataLoader(train_weak_data, batch_size=cfg.batch_size)
 
     transforms_valid = get_transforms(max_frames, scaler=scaler)
     valid_synth_data = DataLoadDf(valid_synth_df, dataset.get_feature_file, many_hot_encoder.encode_strong_df,
@@ -281,6 +284,8 @@ if __name__ == '__main__':
                    "dropout": cfg.conv_dropout}
     crnn = CRNN(**crnn_kwargs)
     crnn_ema = CRNN(**crnn_kwargs)
+
+    LOG.info(crnn)
 
     for param in crnn_ema.parameters():
         param.detach_()
