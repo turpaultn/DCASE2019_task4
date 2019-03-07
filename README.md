@@ -18,10 +18,13 @@ A simplified installation procedure example is provide below for python 3.6 base
 **Note:** `The baseline has been tested with python 3.6, on linux (CentOS 7)`
 
 ## Dataset
-**The dataset is composed of two subset that can be downloaded independently:**
+The dataset is composed of two subset that can be downloaded independently:
 
 1. (Real recordings) launch `python download_data.py` (in `baseline/` folder).
-2. (Synthetic clips) download at : [synthetic_dataset](https://doi.org/10.5281/zenodo.2583796)
+2. (Synthetic clips) download at : [synthetic_dataset](https://doi.org/10.5281/zenodo.2583796).
+
+**Synthetic sounds can only be used for competition purposes until the full CC license list is made available at the end of the competition.**
+
 
 **It is likely that you'll have download issues with the real recordings. 
 Don't hesitate to relaunch `download_data.py` once or twice.
@@ -54,16 +57,19 @@ dataset root
     └───validation			          (validation set)       
 ```
 
+##### Synthetic data (1.8Gb)
+Freesound dataset [1,2]: A subset of [FSD](https://datasets.freesound.org/fsd/) is used as foreground sound events for the synthetic subset of the dataset for DCASE 2019 task 4. FSD is a large-scale, general-purpose audio dataset composed of Freesound content annotated with labels from the AudioSet Ontology [3].
 
-##### Synthetic data generation procedure (1.8Gb)
-
-The synthetic set is composed of 10 sec audio clips generated with [Scaper](https://github.com/justinsalamon/scaper). 
-The foreground events are obtained from [FSD](https://datasets.freesound.org/fsd/). Each event audio clip was verified manually to ensure that the sound quality and the event-to-background ratio were sufficient to be used an isolated event. We also verified that the event was actually dominant in the clip and we controlled if the event onset and offset are present in the clip. Each selected clip was then segmented when needed to remove silences before and after the event and between events when the file contained multiple occurrences of the event class.
+The synthetic set is composed of 10 sec audio clips generated with [Scaper](https://github.com/justinsalamon/scaper) [4]. 
+The foreground events are obtained from FSD. 
+Each event audio clip was verified manually to ensure that the sound quality and the event-to-background ratio were sufficient to be used an isolated event. We also verified that the event was actually dominant in the clip and we controlled if the event onset and offset are present in the clip. Each selected clip was then segmented when needed to remove silences before and after the event and between events when the file contained multiple occurrences of the event class.
 
 ##### Real recordings (23.4Gb):
-Subset of [Audioset](https://research.google.com/audioset/index.html). The download/extraction process can take approximately 4 hours.
+Subset of [Audioset](https://research.google.com/audioset/index.html) [3].
+Audioset: Real recordings are extracted from Audioset. It consists of an expanding ontology of 632 sound event classes and a collection of 2 million human-labeled 10-second sound clips (less than 21% are shorter than 10-seconds) drawn from 2 million Youtube videos. The ontology is specified as a hierarchical graph of event categories, covering a wide range of human and animal sounds, musical instruments and genres, and common everyday environmental sounds.
+
+The download/extraction process can take approximately 4 hours.
 If you experience problems during the download of this subset please contact the task organizers. 
-(Nicolas Turpault and Romain Serizel in priority)
 
 ### Annotation format
 
@@ -109,13 +115,14 @@ Further information on [dcase_website](http://dcase.community/challenge2019/task
 Nicolas Turpault, Romain Serizel, Justin Salamon, Ankit Parag Shah, 2019 -- Present
 
 ## References
-Fonseca E, Pons J, Favory X, Font F, Bogdanov D, Ferraro A, Oramas S, Porter A, Serra X. 
-Freesound datasets: a platform for the creation of open audio datasets. 
-In Proceedings of the 18th ISMIR Conference; 2017 oct 23-27, Suzhou, China. p. 486-93.
 
-J. Salamon, D. MacConnell, M. Cartwright, P. Li, and J. P. Bello. Scaper: A library for soundscape synthesis and augmentation
-In IEEE Workshop on Applications of Signal Processing to Audio and Acoustics (WASPAA), New Paltz, NY, USA, Oct. 2017.
+- [1] F. Font, G. Roma & X. Serra. Freesound technical demo. In Proceedings of the 21st ACM international conference on Multimedia. ACM, 2013.
+- [2] E. Fonseca, J. Pons, X. Favory, F. Font, D. Bogdanov, A. Ferraro, S. Oramas, A. Porter & X. Serra. Freesound Datasets: A Platform for the Creation of Open Audio Datasets.
+In Proceedings of the 18th International Society for Music Information Retrieval Conference, Suzhou, China, 2017.
 
-Jort F. Gemmeke and Daniel P. W. Ellis and Dylan Freedman and Aren Jansen and Wade Lawrence and R. Channing Moore and Manoj Plakal and Marvin Ritter.
+- [3] Jort F. Gemmeke and Daniel P. W. Ellis and Dylan Freedman and Aren Jansen and Wade Lawrence and R. Channing Moore and Manoj Plakal and Marvin Ritter.
 Audio Set: An ontology and human-labeled dataset for audio events.
 In Proceedings IEEE ICASSP 2017, New Orleans, LA, 2017.
+
+- [4] J. Salamon, D. MacConnell, M. Cartwright, P. Li, and J. P. Bello. Scaper: A library for soundscape synthesis and augmentation
+In IEEE Workshop on Applications of Signal Processing to Audio and Acoustics (WASPAA), New Paltz, NY, USA, Oct. 2017.
