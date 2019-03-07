@@ -9,10 +9,24 @@ class GLU(nn.Module):
         self.linear = nn.Linear(input_num, input_num)
 
     def forward(self, x):
-        lin = self.linear(x.permute(0,2,3,1))
-        lin = lin.permute(0,3,1,2)
+        lin = self.linear(x.permute(0, 2, 3, 1))
+        lin = lin.permute(0, 3, 1, 2)
         sig = self.sigmoid(x)
         res = lin * sig
+        return res
+
+
+class ContextGating(nn.Module):
+    def __init__(self, input_num):
+        super(ContextGating, self).__init__()
+        self.sigmoid = nn.Sigmoid()
+        self.linear = nn.Linear(input_num, input_num)
+
+    def forward(self, x):
+        lin = self.linear(x.permute(0, 2, 3, 1))
+        lin = lin.permute(0, 3, 1, 2)
+        sig = self.sigmoid(lin)
+        res = x * sig
         return res
 
 
@@ -23,7 +37,7 @@ class CNN(nn.Module):
                  pooling=[(1, 4), (1, 4), (1, 4)]
                  ):
         super(CNN, self).__init__()
-
+        self.nb_filters = nb_filters
         cnn = nn.Sequential()
 
         def conv(i, batchNormalization=False, dropout=None, activ="relu"):
@@ -40,6 +54,8 @@ class CNN(nn.Module):
                 cnn.add_module('relu{0}'.format(i), nn.ReLU())
             elif activ.lower() == "glu":
                 cnn.add_module('glu{0}'.format(i), GLU(nOut))
+            elif activ.lower() == "cg":
+                cnn.add_module('cg{0}'.format(i), ContextGating(nOut))
             if dropout is not None:
                 cnn.add_module('dropout{0}'.format(i),
                                nn.Dropout(dropout))

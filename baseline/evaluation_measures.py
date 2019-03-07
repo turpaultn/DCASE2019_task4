@@ -48,13 +48,14 @@ def get_f_measure_by_class(torch_model, nb_tags, dataloader_, thresholds_=None):
         if torch.cuda.is_available():
             batch_x = batch_x.cuda()
 
-        predictions = torch_model(batch_x)
-        predictions = predictions.cpu().data.numpy()
+        pred_strong, pred_weak = torch_model(batch_x)
+        pred_weak = pred_weak.cpu().data.numpy()
         labels = y.numpy()
 
-        if len(predictions.shape) == 3:
+        # Used only with a model predicting only strong outputs
+        if len(pred_weak.shape) == 3:
             # average data to have weak labels
-            predictions = np.max(predictions, axis=1)
+            pred_weak = np.max(pred_weak, axis=1)
 
         if len(labels.shape) == 3:
             labels = np.max(labels, axis=1)
@@ -70,7 +71,7 @@ def get_f_measure_by_class(torch_model, nb_tags, dataloader_, thresholds_=None):
             assert type(thresholds_) is list
             thresh = thresholds_
 
-        batch_predictions = ProbabilityEncoder().binarization(predictions,
+        batch_predictions = ProbabilityEncoder().binarization(pred_weak,
                                                               binarization_type=binarization_type,
                                                               threshold=thresh,
                                                               time_axis=0

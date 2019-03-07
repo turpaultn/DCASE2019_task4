@@ -7,38 +7,28 @@ from models.RNN import BidirectionalGRU
 from models.CNN import CNN
 
 
-class GLU(nn.Module):
-    def __init__(self, input_num):
-        super(GLU, self).__init__()
-        self.sigmoid = nn.Sigmoid()
-        self.linear = nn.Linear(input_num, input_num)
-
-    def forward(self, x):
-        lin = self.linear(x.permute(0, 2, 3, 1))
-        lin = lin.permute(0, 3, 1, 2)
-        sig = self.sigmoid(x)
-        res = lin * sig
-        return res
-
-
 class CRNN(nn.Module):
 
-    def __init__(self, n_in_channel, nclass, activation="Relu", dropout=0,
-                 train_cnn=True, rnn_type='BGRU', n_layers_RNN=1, dropout_recurrent=0, **kwargs):
+    def __init__(self, n_in_channel, nclass, attention=False, activation="Relu", dropout=0,
+                 train_cnn=True, rnn_type='BGRU', n_RNN_cell=64, n_layers_RNN=1, dropout_recurrent=0, **kwargs):
         super(CRNN, self).__init__()
-
+        self.attention = attention
         self.cnn = CNN(n_in_channel, activation, dropout, **kwargs)
         if not train_cnn:
             for param in self.cnn.parameters():
                 param.requires_grad = False
         self.train_cnn = train_cnn
         if rnn_type == 'BGRU':
-            self.rnn = BidirectionalGRU(64, 32, dropout=dropout_recurrent, num_layers=n_layers_RNN)
+            self.rnn = BidirectionalGRU(self.cnn.nb_filters[-1],
+                                        n_RNN_cell, dropout=dropout_recurrent, num_layers=n_layers_RNN)
         else:
             NotImplementedError("Only BGRU supported for CRNN for now")
         self.dropout = nn.Dropout(dropout)
-        self.dense = nn.Linear(64, nclass)
+        self.dense = nn.Linear(n_RNN_cell*2, nclass)
         self.sigmoid = nn.Sigmoid()
+        if self.attention:
+            self.dense_softmax = nn.Linear(n_RNN_cell*2, nclass)
+            self.softmax = nn.Softmax()
 
     def load_cnn(self, parameters):
         self.cnn.load(parameters)
@@ -82,10 +72,16 @@ class CRNN(nn.Module):
         # rnn features
         x = self.rnn(x)
         x = self.dropout(x)
-        x = self.dense(x)  # [bs, frames, nclass]
-        x = self.sigmoid(x)
-
-        return x
+        strong = self.dense(x)  # [bs, frames, nclass]
+        strong = self.sigmoid(strong)
+        if self.attention:
+            sof = self.dense_softmax(x)  # [bs, frames, nclass]
+            sof = self.softmax(sof)
+            sof[sof < 1e-7] = 1e-7
+            weak = (strong * sof).sum(1) / sof.sum(1)   # [bs, nclass]
+        else:
+            weak = strong.mean(1)
+        return strong, weak
 
 
 if __name__ == '__main__':

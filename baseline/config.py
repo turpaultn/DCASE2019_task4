@@ -64,8 +64,7 @@ early_stopping = None
 model_checkpoint = 1
 save_best = True
 
-conv_dropout = 0.3
-dropout_non_recurrent = 0.3
-activation = "relu"
+dropout = 0.5
+activation = "glu"
 
 best_threshold_weak = True

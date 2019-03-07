@@ -229,8 +229,8 @@ class PadOrTrunc:
         for k in range(len(sample) - 1):
             sample[k] = pad_trunc_seq(sample[k], self.nb_frames)
 
-        if len(sample[-1].shape) == 2:
-            sample[-1] = pad_trunc_seq(sample[-1], self.nb_frames)
+        # if len(sample[-1].shape) == 2:
+        #     sample[-1] = pad_trunc_seq(sample[-1], self.nb_frames)
 
         return sample
 

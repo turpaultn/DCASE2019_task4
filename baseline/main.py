@@ -16,7 +16,7 @@ from Scaler import Scaler
 from evaluation_measures import event_based_evaluation_df, get_f_measure_by_class
 from models.CRNN import CRNN
 import config as cfg
-from utils import ManyHotEncoder, AverageMeterSet, create_folder, SaveBest, to_cuda_if_available
+from utils import ManyHotEncoder, AverageMeterSet, create_folder, SaveBest, to_cuda_if_available, weights_init
 import ramps
 from torch import nn
 from Logger import LOG
@@ -76,14 +76,11 @@ def train(train_loader, model, ema_model, optimizer, epoch, global_step):
         [batch_input, ema_batch_input, target] = to_cuda_if_available([batch_input, ema_batch_input, target])
         LOG.debug(batch_input.mean())
         # Outputs
-        # ema_model_out = ema_model(ema_batch_input)
-        # ema_model_out = ema_model_out.detach()
-        # strong_pred_ema = ema_model_out
-        # weak_pred_ema = torch.mean(ema_model_out, 1)
+        # strong_pred_ema, weak_pred_ema = ema_model(ema_batch_input)
+        # strong_pred_ema = strong_pred_ema.detach()
+        # weak_pred_ema = weak_pred_ema.detach()
 
-        model_out = model(batch_input)
-        strong_pred = model_out
-        weak_pred = torch.mean(model_out, 1)
+        strong_pred, weak_pred = model(batch_input)
 
         # Weak BCE Loss
         # Trick to not take unlabeled data
@@ -162,7 +159,7 @@ def get_predictions(model, valid_dataset, decoder, in_seconds=True, save_predict
     for i, (input, _) in enumerate(valid_dataset):
         [input] = to_cuda_if_available([input])
 
-        pred_strong = model(input.unsqueeze(0))
+        pred_strong, _ = model(input.unsqueeze(0))
         pred_strong = pred_strong.cpu()
         pred_strong = pred_strong.squeeze(0).detach().numpy()
         pred_strong = ProbabilityEncoder().binarization(pred_strong, binarization_type="global_threshold",
@@ -208,7 +205,8 @@ def get_transforms(frames, scaler=None, add_axis_conv=True, augment_type=None):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="")
-    parser.add_argument('--subpart_data', type=int, default=None, dest="subpart_data")
+    parser.add_argument("-s", '--subpart_data', type=int, default=None, dest="subpart_data",
+                        help="Number of files to be used. Useful when testing on small number of files.")
     f_args = parser.parse_args()
 
     reduced_number_of_data = f_args.subpart_data
@@ -226,7 +224,7 @@ if __name__ == '__main__':
     # ##############
     # DATA
     # ##############
-    dataset = DatasetDcase2019Task4(os.path.join(".."),
+    dataset = DatasetDcase2019Task4("..",
                                     base_feature_dir=os.path.join("..", "dataset", "features"),
                                     subpart_data=reduced_number_of_data,
                                     save_log_feature=False)
@@ -245,7 +243,6 @@ if __name__ == '__main__':
     train_weak_df = weak_df.sample(frac=0.8, random_state=26)
     valid_weak_df = weak_df.drop(train_weak_df.index).reset_index(drop=True)
     train_weak_df = train_weak_df.reset_index(drop=True)
-
     LOG.debug(valid_weak_df.event_labels.value_counts())
 
     # Divide synthetic in train and valid
@@ -257,7 +254,6 @@ if __name__ == '__main__':
     #  Not doing it for valid, because not using labels (when prediction) and event based metric expect sec.
     train_synth_df.onset = train_synth_df.onset * cfg.sample_rate // cfg.hop_length
     train_synth_df.offset = train_synth_df.offset * cfg.sample_rate // cfg.hop_length
-
     LOG.debug(valid_synth_df.event_label.value_counts())
 
     train_weak_data = DataLoadDf(train_weak_df, dataset.get_feature_file, many_hot_encoder.encode_strong_df,
@@ -268,11 +264,9 @@ if __name__ == '__main__':
                                   transform=transforms)
 
     scaler = Scaler()
-    if not os.path.exists(scaler_path):
-        scaler.calculate_scaler(ConcatDataset([train_weak_data, train_synth_data]))
-        scaler.save(scaler_path)
-    else:
-        scaler.load(scaler_path)
+    scaler.calculate_scaler(ConcatDataset([train_weak_data, train_synth_data]))
+    scaler.save(scaler_path)
+
     LOG.debug(scaler.mean_)
 
     transforms = get_transforms(max_frames, scaler, augment_type="noise")
@@ -290,17 +284,18 @@ if __name__ == '__main__':
                                   transform=transforms_valid)
     valid_weak_data = DataLoadDf(valid_weak_df, dataset.get_feature_file, many_hot_encoder.encode_strong_df,
                                   transform=transforms_valid)
-    validation_dataset = DataLoadDf(validation_df, dataset.get_feature_file, many_hot_encoder.encode_strong_df,
-                                    transform=transforms_valid)
+
 
     # ##############
     # Model
     # ##############
     crnn_kwargs = {"n_in_channel": 1, "nclass":len(classes), "activation": "Relu",
-                   "dropout": cfg.conv_dropout}
+                   "dropout": cfg.dropout}
     crnn = CRNN(**crnn_kwargs)
     crnn_ema = CRNN(**crnn_kwargs)
 
+    crnn.apply(weights_init)
+    crnn_ema.apply(weights_init)
     LOG.info(crnn)
 
     for param in crnn_ema.parameters():
@@ -373,6 +368,11 @@ if __name__ == '__main__':
     # ##############
     # Validation
     # ##############
+    scaler = Scaler()
+    scaler.load(scaler_path)
+    transforms_valid = get_transforms(max_frames, scaler=scaler)
+    validation_dataset = DataLoadDf(validation_df, dataset.get_feature_file, many_hot_encoder.encode_strong_df,
+                                    transform=transforms_valid)
     predicitons_fname = os.path.join(saved_pred_dir, "baseline_validation.csv")
     predictions = get_predictions(crnn, validation_dataset, many_hot_encoder.decode_strong,
                                   save_predictions=predicitons_fname)

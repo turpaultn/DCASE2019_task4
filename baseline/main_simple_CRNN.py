@@ -16,7 +16,7 @@ from Scaler import Scaler
 from evaluation_measures import event_based_evaluation_df, get_f_measure_by_class
 from models.CRNN import CRNN
 import config as cfg
-from utils import ManyHotEncoder, AverageMeterSet, create_folder, SaveBest, to_cuda_if_available
+from utils import ManyHotEncoder, AverageMeterSet, create_folder, SaveBest, to_cuda_if_available, weights_init
 import ramps
 from torch import nn
 from Logger import LOG
@@ -41,10 +41,7 @@ def train(train_loader, model, optimizer, epoch):
         [batch_input, target] = to_cuda_if_available([batch_input, target])
         LOG.debug(batch_input.mean())
 
-        model_out = model(batch_input)
-        strong_pred = model_out
-
-        weak_pred = torch.mean(model_out, 1)
+        strong_pred, weak_pred = model(batch_input)
 
         # Weak BCE Loss
         # Trick to not take unlabeled data
@@ -92,7 +89,7 @@ def get_predictions(model, valid_dataset, decoder, in_seconds=True, save_predict
     for i, (input, _) in enumerate(valid_dataset):
         [input] = to_cuda_if_available([input])
 
-        pred_strong = model(input.unsqueeze(0))
+        pred_strong, _ = model(input.unsqueeze(0))
         pred_strong = pred_strong.cpu()
         pred_strong = pred_strong.squeeze(0).detach().numpy()
         pred_strong = ProbabilityEncoder().binarization(pred_strong, binarization_type="global_threshold",
@@ -138,9 +135,12 @@ def get_transforms(frames, scaler=None, add_axis_conv=True, augment_type=None):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="")
-    parser.add_argument('--subpart_data', type=int, default=None, dest="subpart_data")
-    parser.add_argument('--model_path', type=str, default=None, dest="model_path")
-    parser.add_argument('--resume', type=bool, default=False, dest="resume")
+    parser.add_argument("-s", '--subpart_data', type=int, default=None, dest="subpart_data",
+                        help="Number of files to be used. Useful when testing on small number of files.")
+    parser.add_argument("-m", '--model_path', type=str, default=None, dest="model_path",
+                        help="Path of the model to be resume or to get validation results from.")
+    parser.add_argument("-r", '--resume', type=bool, default=False, dest="resume",
+                        help="Whether or not resuming the model given in model_path.")
     f_args = parser.parse_args()
 
     reduced_number_of_data = f_args.subpart_data
@@ -172,19 +172,20 @@ if __name__ == '__main__':
     validation_df = dataset.intialize_and_get_df(cfg.validation, reduced_number_of_data)
 
     classes = DatasetDcase2019Task4.get_classes([weak_df, validation_df, synthetic_df])
-    many_hot_encoder = ManyHotEncoder(classes, n_frames=max_frames)
+
+    # Be careful, frames is max_frames // 8 because max_pooling is applied on time axis in the model
+    many_hot_encoder = ManyHotEncoder(classes, n_frames=max_frames // 8)
 
     transforms = get_transforms(max_frames)
 
     # Divide weak in train and valid
-    train_weak_df = weak_df.sample(frac=0.8, random_state=10)
+    train_weak_df = weak_df.sample(frac=0.8, random_state=26)
     valid_weak_df = weak_df.drop(train_weak_df.index).reset_index(drop=True)
     train_weak_df = train_weak_df.reset_index(drop=True)
-
-    LOG.debug(valid_weak_df)
+    LOG.debug(valid_weak_df.event_labels.value_counts())
 
     # Divide synthetic in train and valid
-    filenames_train = synthetic_df.filename.drop_duplicates().sample(frac=0.8, random_state=10)
+    filenames_train = synthetic_df.filename.drop_duplicates().sample(frac=0.8, random_state=26)
     train_synth_df = synthetic_df[synthetic_df.filename.isin(filenames_train)]
     valid_synth_df = synthetic_df.drop(train_synth_df.index).reset_index(drop=True)
 
@@ -192,6 +193,7 @@ if __name__ == '__main__':
     #  Not doing it for valid, because not using labels (when prediction) and event based metric expect sec.
     train_synth_df.onset = train_synth_df.onset * cfg.sample_rate // cfg.hop_length
     train_synth_df.offset = train_synth_df.offset * cfg.sample_rate // cfg.hop_length
+    LOG.debug(valid_synth_df.event_label.value_counts())
 
     LOG.debug(valid_synth_df)
 
@@ -200,11 +202,9 @@ if __name__ == '__main__':
     train_synth_data = DataLoadDf(train_synth_df, dataset.get_feature_file, many_hot_encoder.encode_strong_df,
                                   transform=transforms)
     scaler = Scaler()
-    if not os.path.exists(scaler_path):
-        scaler.calculate_scaler(ConcatDataset([train_weak_data, train_synth_data]))
-        scaler.save(scaler_path)
-    else:
-        scaler.load(scaler_path)
+    scaler = Scaler()
+    scaler.calculate_scaler(ConcatDataset([train_weak_data, train_synth_data]))
+    scaler.save(scaler_path)
     LOG.debug(scaler.mean_)
 
     transforms_valid = get_transforms(max_frames, scaler=scaler)
@@ -222,9 +222,11 @@ if __name__ == '__main__':
         crnn = CRNN(**crnn_kwargs)
         crnn.load(parameters=state["model"]["state_dict"])
     else:
-        crnn_kwargs = {"n_in_channel": 1, "nclass":len(classes), "activation": "Relu",
-                       "dropout": cfg.conv_dropout}
+        crnn_kwargs = {"n_in_channel": 1, "nclass":len(classes), "n_RNN_cell":128, "activation": cfg.activation,
+                       "dropout": cfg.dropout, "kernel_size": 7 * [3], "padding": 7 * [1], "stride": 7 * [1],
+                       "nb_filters": [16, 32, 64, 128, 128, 128], "pooling": list(3*((2,2),) + 4*((1,2),))}
         crnn = CRNN(**crnn_kwargs)
+        crnn.apply(weights_init)
     LOG.info(crnn)
 
     if model_path is None or resume:
@@ -248,10 +250,12 @@ if __name__ == '__main__':
             optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, crnn.parameters()), **optim_kwargs)
             optimizer.load_state_dict(state["optimizer"]["state_dict"])
             starting_epoch = state["epoch"]
+            LOG.info("Resuming at epoch: {}".format(starting_epoch))
         else:
             optim_kwargs = {"lr": 0.001, "betas": (0.9, 0.999)}
             optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, crnn.parameters()), **optim_kwargs)
             starting_epoch = 0
+        LOG.info(optimizer)
         bce_loss = nn.BCELoss()
 
         state = {
@@ -310,9 +314,15 @@ if __name__ == '__main__':
     # ##############
     # Validation
     # ##############
+    scaler = Scaler()
+    scaler.load(scaler_path)
+    transforms_valid = get_transforms(max_frames, scaler=scaler)
+    validation_dataset = DataLoadDf(validation_df, dataset.get_feature_file, many_hot_encoder.encode_strong_df,
+                                    transform=transforms_valid)
     predicitons_fname = os.path.join(saved_pred_dir, "baseline_validation.csv")
     predictions = get_predictions(crnn, validation_dataset, many_hot_encoder.decode_strong,
                                   save_predictions=predicitons_fname)
     metric = event_based_evaluation_df(validation_df, predictions)
     LOG.info("FINAL predictions")
     LOG.info(metric)
+

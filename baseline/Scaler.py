@@ -16,6 +16,7 @@ class Scaler(object):
     def __init__(self):
         self.mean_ = None
         self.mean_of_square_ = None
+        self.std_ = None
 
     # compute the mean incrementaly
     def mean(self, data, axis=-1):
@@ -120,6 +121,8 @@ class Scaler(object):
 
         self.mean_ = np.array(dict_save["mean_"])
         self.mean_of_square_ = np.array(dict_save["mean_of_square_"])
+        variance = self.variance(self.mean_, self.mean_of_square_)
+        self.std_ = self.std(variance)
 
 
 if __name__ == '__main__':
