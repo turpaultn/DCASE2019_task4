@@ -141,7 +141,7 @@ class ManyHotEncoder:
         """
         result_labels = []
         for i, label_column in enumerate(labels.T):
-            change_indices = DecisionEncoder.find_contiguous_regions(label_column)
+            change_indices = DecisionEncoder().find_contiguous_regions(label_column)
 
             # append [label, onset, offset] in the result list
             for row in change_indices:

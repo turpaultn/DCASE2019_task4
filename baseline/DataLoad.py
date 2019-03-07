@@ -47,6 +47,7 @@ class DataLoadDf(Dataset):
         self.encode_function = encode_function
         self.transform = transform
         self.return_indexes = return_indexes
+        self.filenames = df.filename.drop_duplicates()
 
     def set_return_indexes(self, val):
         """ Set the value of self.return_indexes
@@ -62,7 +63,7 @@ class DataLoadDf(Dataset):
             int
                 Length of the object
         """
-        length = len(self.df)
+        length = len(self.filenames)
         return length
 
     def get_sample(self, index):
@@ -76,7 +77,7 @@ class DataLoadDf(Dataset):
             Tuple containing the features and the labels (numpy.array, numpy.array)
 
         """
-        features = self.get_feature_file_func(self.df.iloc[index]["filename"])
+        features = self.get_feature_file_func(self.filenames.iloc[index])
 
         # event_labels means weak labels, event_label means strong labels
         if "event_labels" in self.df.columns or {"onset", "offset", "event_label"}.issubset(self.df.columns):

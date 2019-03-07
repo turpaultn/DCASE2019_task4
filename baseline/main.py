@@ -171,7 +171,7 @@ def get_predictions(model, valid_dataset, decoder, in_seconds=True, save_predict
         pred_strong = scipy.ndimage.filters.median_filter(pred_strong, (cfg.median_window, 1))
         pred = decoder(pred_strong)
         pred = pd.DataFrame(pred, columns=["event_label", "onset", "offset"])
-        pred["filename"] = valid_dataset.df.iloc[i]["filename"]
+        pred["filename"] = valid_dataset.filenames.iloc[i]
         if i == 0:
             LOG.debug("predictions: \n{}".format(pred))
             LOG.debug("predictions strong: \n{}".format(pred_strong))
