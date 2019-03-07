@@ -23,9 +23,6 @@ The dataset is composed of two subset that can be downloaded independently:
 1. (Real recordings) launch `python download_data.py` (in `baseline/` folder).
 2. (Synthetic clips) download at : [synthetic_dataset](https://doi.org/10.5281/zenodo.2583796).
 
-**Synthetic sounds can only be used for competition purposes until the full CC license list is made available at the end of the competition.**
-
-
 **It is likely that you'll have download issues with the real recordings. 
 Don't hesitate to relaunch `download_data.py` once or twice.
 At the end of the download, please send a mail with the CSV files 
@@ -57,14 +54,19 @@ dataset root
     └───validation			          (validation set)       
 ```
 
-##### Synthetic data (1.8Gb)
+#### Synthetic data (1.8Gb)
 Freesound dataset [1,2]: A subset of [FSD](https://datasets.freesound.org/fsd/) is used as foreground sound events for the synthetic subset of the dataset for DCASE 2019 task 4. FSD is a large-scale, general-purpose audio dataset composed of Freesound content annotated with labels from the AudioSet Ontology [3].
 
 The synthetic set is composed of 10 sec audio clips generated with [Scaper](https://github.com/justinsalamon/scaper) [4]. 
 The foreground events are obtained from FSD. 
 Each event audio clip was verified manually to ensure that the sound quality and the event-to-background ratio were sufficient to be used an isolated event. We also verified that the event was actually dominant in the clip and we controlled if the event onset and offset are present in the clip. Each selected clip was then segmented when needed to remove silences before and after the event and between events when the file contained multiple occurrences of the event class.
 
-##### Real recordings (23.4Gb):
+##### License
+All sounds comming from FSD are released under Creative Commons licences.
+**Synthetic sounds can only be used for competition purposes until the full CC license list is made available at the end of the competition.**
+
+
+#### Real recordings (23.4Gb):
 Subset of [Audioset](https://research.google.com/audioset/index.html) [3].
 Audioset: Real recordings are extracted from Audioset. It consists of an expanding ontology of 632 sound event classes and a collection of 2 million human-labeled 10-second sound clips (less than 21% are shorter than 10-seconds) drawn from 2 million Youtube videos. The ontology is specified as a hierarchical graph of event categories, covering a wide range of human and animal sounds, musical instruments and genres, and common everyday environmental sounds.
 
