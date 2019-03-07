@@ -85,7 +85,7 @@ def train(train_loader, model, optimizer, epoch):
             epoch, meters=meters))
 
 
-def get_predictions(model, valid_dataset, decoder, in_seconds=True, save_predictions=None):
+def get_predictions(model, valid_dataset, decoder, save_predictions=None):
     for i, (input, _) in enumerate(valid_dataset):
         [input] = to_cuda_if_available([input])
 
@@ -106,9 +106,6 @@ def get_predictions(model, valid_dataset, decoder, in_seconds=True, save_predict
         else:
             prediction_df = prediction_df.append(pred)
 
-    if in_seconds:
-        prediction_df.onset = prediction_df.onset / (cfg.sample_rate / cfg.hop_length)
-        prediction_df.offset = prediction_df.offset / (cfg.sample_rate / cfg.hop_length)
     if save_predictions is not None:
         LOG.info("Saving predictions at: {}".format(save_predictions))
         prediction_df.to_csv(save_predictions, index=False)
@@ -173,8 +170,9 @@ if __name__ == '__main__':
 
     classes = DatasetDcase2019Task4.get_classes([weak_df, validation_df, synthetic_df])
 
+    pooling_time_ratio = 8
     # Be careful, frames is max_frames // 8 because max_pooling is applied on time axis in the model
-    many_hot_encoder = ManyHotEncoder(classes, n_frames=max_frames // 8)
+    many_hot_encoder = ManyHotEncoder(classes, n_frames=max_frames // pooling_time_ratio)
 
     transforms = get_transforms(max_frames)
 
@@ -191,15 +189,16 @@ if __name__ == '__main__':
 
     # Put train_synth in frames so many_hot_encoder can work.
     #  Not doing it for valid, because not using labels (when prediction) and event based metric expect sec.
-    train_synth_df.onset = train_synth_df.onset * cfg.sample_rate // cfg.hop_length
-    train_synth_df.offset = train_synth_df.offset * cfg.sample_rate // cfg.hop_length
+    train_synth_df_frames = train_synth_df.copy()
+    train_synth_df_frames.onset = train_synth_df_frames.onset * cfg.sample_rate // cfg.hop_length // pooling_time_ratio
+    train_synth_df_frames.offset = train_synth_df_frames.offset * cfg.sample_rate // cfg.hop_length // pooling_time_ratio
     LOG.debug(valid_synth_df.event_label.value_counts())
 
     LOG.debug(valid_synth_df)
 
     train_weak_data = DataLoadDf(train_weak_df, dataset.get_feature_file, many_hot_encoder.encode_strong_df,
                                  transform=transforms)
-    train_synth_data = DataLoadDf(train_synth_df, dataset.get_feature_file, many_hot_encoder.encode_strong_df,
+    train_synth_data = DataLoadDf(train_synth_df_frames, dataset.get_feature_file, many_hot_encoder.encode_strong_df,
                                   transform=transforms)
     scaler = Scaler()
     scaler = Scaler()
@@ -282,9 +281,20 @@ if __name__ == '__main__':
             train(training_data, crnn, optimizer, epoch)
 
             crnn = crnn.eval()
+            train_predictions = get_predictions(crnn, train_synth_data, many_hot_encoder.decode_strong,
+                                          save_predictions=None)
+            train_predictions.onset = train_predictions.onset * pooling_time_ratio / (cfg.sample_rate / cfg.hop_length)
+            train_predictions.offset = train_predictions.offset * pooling_time_ratio / (cfg.sample_rate / cfg.hop_length)
+            train_metric = event_based_evaluation_df(train_synth_df, train_predictions)
+            LOG.info(train_metric)
+
+            weak_metric = get_f_measure_by_class(crnn, len(classes),
+                                                 DataLoader(train_weak_data, batch_size=cfg.batch_size))
+            LOG.info("Weak F1-score per class: \n {}".format(pd.DataFrame(weak_metric * 100, many_hot_encoder.labels)))
+            LOG.info("Weak F1-score macro averaged: {}".format(np.mean(weak_metric)))
+
             predictions = get_predictions(crnn, valid_synth_data, many_hot_encoder.decode_strong,
                                           save_predictions=None)
-
             valid_metric = event_based_evaluation_df(valid_synth_df, predictions)
             weak_metric = get_f_measure_by_class(crnn, len(classes),
                                                  DataLoader(valid_weak_data, batch_size=cfg.batch_size))
