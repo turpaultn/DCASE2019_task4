@@ -246,7 +246,7 @@ if __name__ == '__main__':
     valid_weak_df = weak_df.drop(train_weak_df.index).reset_index(drop=True)
     train_weak_df = train_weak_df.reset_index(drop=True)
 
-    LOG.debug(valid_weak_df)
+    LOG.debug(valid_weak_df.event_labels.value_counts())
 
     # Divide synthetic in train and valid
     filenames_train = synthetic_df.filename.drop_duplicates().sample(frac=0.8, random_state=26)
@@ -258,7 +258,7 @@ if __name__ == '__main__':
     train_synth_df.onset = train_synth_df.onset * cfg.sample_rate // cfg.hop_length
     train_synth_df.offset = train_synth_df.offset * cfg.sample_rate // cfg.hop_length
 
-    LOG.debug(valid_synth_df)
+    LOG.debug(valid_synth_df.event_label.value_counts())
 
     train_weak_data = DataLoadDf(train_weak_df, dataset.get_feature_file, many_hot_encoder.encode_strong_df,
                                  transform=transforms)
