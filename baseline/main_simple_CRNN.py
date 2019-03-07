@@ -30,14 +30,9 @@ def train(train_loader, model, optimizer, epoch):
     meters = AverageMeterSet()
     meters.update('lr', optimizer.param_groups[0]['lr'])
 
-    train_iter_count = cfg.n_epoch * len(train_loader)
     LOG.debug("Nb batches: {}".format(len(train_loader)))
     start = time.time()
     for i, (batch_input, target) in enumerate(train_loader):
-        labeled_minibatch_size = target.data.ne(-1).sum()
-        assert labeled_minibatch_size > 0
-        meters.update('labeled_minibatch_size', labeled_minibatch_size)
-
         [batch_input, target] = to_cuda_if_available([batch_input, target])
         LOG.debug(batch_input.mean())
 
@@ -274,10 +269,9 @@ if __name__ == '__main__':
         # ##############
         # Train
         # ##############
+        [crnn] = to_cuda_if_available([crnn])
         for epoch in range(starting_epoch, cfg.n_epoch):
             crnn = crnn.train()
-
-            [crnn] = to_cuda_if_available([crnn])
 
             train(training_data, crnn, optimizer, epoch)
 
