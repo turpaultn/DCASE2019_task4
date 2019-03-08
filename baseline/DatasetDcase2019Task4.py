@@ -72,12 +72,11 @@ class DatasetDcase2019Task4:
         feature_dir : str, directory to store the features
 
     """
-    def __init__(self, local_path="", base_feature_dir="features", recompute_features=False, subpart_data=None,
+    def __init__(self, local_path="", base_feature_dir="features", recompute_features=False,
                  save_log_feature=True):
 
         self.local_path = local_path
         self.recompute_features = recompute_features
-        self.subpart_data = subpart_data
         self.save_log_feature = save_log_feature
 
         feature_dir = os.path.join(base_feature_dir, "sr" + str(cfg.sample_rate) + "_win" + str(cfg.n_window)

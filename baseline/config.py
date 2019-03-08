@@ -1,6 +1,9 @@
 import math
+import os
 
-workspace = ""
+import pandas as pd
+
+workspace = ".."
 # Dataset Paths
 weak = 'dataset/metadata/train/weak.csv'
 unlabel = 'dataset/metadata/train/unlabel_in_domain.csv'
@@ -64,3 +67,11 @@ dropout = 0.5
 activation = "glu"
 
 best_threshold_weak = True
+
+classes = pd.read_csv(os.path.join(workspace, validation), sep="\t").event_label.unique()
+crnn_kwargs = {"n_in_channel": 1, "nclass": len(classes), "attention": True, "n_RNN_cell": 64,
+               "n_layers_RNN": 2,
+                "activation": activation,
+                "dropout": dropout, "kernel_size": 3 * [3], "padding": 3 * [1], "stride": 3 * [1],
+                "nb_filters": [64, 64, 64],
+                "pooling": list(3 * ((2, 4),))}

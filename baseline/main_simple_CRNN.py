@@ -97,7 +97,7 @@ if __name__ == '__main__':
     max_frames = cfg.max_frames
 
     store_dir = "stored_data"
-    saved_model_dir = os.path.join(store_dir, "model")
+    saved_model_dir = os.path.join(store_dir, "model", "simple_CRNN")
     saved_pred_dir = os.path.join(store_dir, "predictions")
     scaler_path = os.path.join(store_dir, "scaler")
     create_folder(store_dir)
@@ -252,21 +252,23 @@ if __name__ == '__main__':
             predictions.offset = predictions.offset * pooling_time_ratio / (cfg.sample_rate / cfg.hop_length)
             valid_metric = event_based_evaluation_df(valid_synth_df, predictions)
 
-            # Eval 2018
-            predictions = get_predictions(crnn, eval_2018, many_hot_encoder.decode_strong,
-                                          save_predictions=None)
-            predictions.onset = predictions.onset * pooling_time_ratio / (cfg.sample_rate / cfg.hop_length)
-            predictions.offset = predictions.offset * pooling_time_ratio / (cfg.sample_rate / cfg.hop_length)
-            eval2018_metric = event_based_evaluation_df(eval_2018_df, predictions)
-
             weak_metric = get_f_measure_by_class(crnn, len(classes),
                                                  DataLoader(valid_weak_data, batch_size=cfg.batch_size))
 
             LOG.info("Weak F1-score per class: \n {}".format(pd.DataFrame(weak_metric * 100, many_hot_encoder.labels)))
             LOG.info("Weak F1-score macro averaged: {}".format(np.mean(weak_metric)))
             LOG.info(valid_metric)
+            # Eval 2018
+            predictions = get_predictions(crnn, eval_2018, many_hot_encoder.decode_strong,
+                                          save_predictions=None)
+            predictions.onset = predictions.onset * pooling_time_ratio / (cfg.sample_rate / cfg.hop_length)
+            predictions.offset = predictions.offset * pooling_time_ratio / (cfg.sample_rate / cfg.hop_length)
+            eval2018_metric = event_based_evaluation_df(eval_2018_df, predictions, t_collar=0.200,
+                                                        percentage_of_length=0.2)
+            eval2018_metric_seg = segment_based_evaluation_df(eval_2018_df, predictions, time_resolution=1.)
             LOG.info("Eval_metric:")
             LOG.info(eval2018_metric)
+            LOG.info(eval2018_metric_seg)
 
             state['model']['state_dict'] = crnn.state_dict()
             state['optimizer']['state_dict'] = optimizer.state_dict()
@@ -293,21 +295,23 @@ if __name__ == '__main__':
     scaler = Scaler()
     scaler.load(scaler_path)
     transforms_valid = get_transforms(max_frames, scaler=scaler)
+
     # Eval 2018
     eval_2018_df = dataset.intialize_and_get_df(cfg.eval2018, reduced_number_of_data)
     eval_2018 = DataLoadDf(eval_2018_df, dataset.get_feature_file, many_hot_encoder.encode_strong_df,
                            transform=transforms_valid)
+    # Strong
     predictions = get_predictions(crnn, eval_2018, many_hot_encoder.decode_strong,
                                   save_predictions=None)
     predictions.onset = predictions.onset * pooling_time_ratio / (cfg.sample_rate / cfg.hop_length)
     predictions.offset = predictions.offset * pooling_time_ratio / (cfg.sample_rate / cfg.hop_length)
-    eval2018_metric = event_based_evaluation_df(eval_2018_df, predictions)
-    eval2018_metric_seg = segment_based_evaluation_df(eval_2018_df, predictions)
-
+    eval2018_metric = event_based_evaluation_df(eval_2018_df, predictions, t_collar=0.200, percentage_of_length=0.2)
+    eval2018_metric_seg = segment_based_evaluation_df(eval_2018_df, predictions, time_resolution=1.)
+    # Weak
     eval_2018_df.onset = eval_2018_df.onset * (cfg.sample_rate / cfg.hop_length) // pooling_time_ratio
     eval_2018_df.offset = eval_2018_df.offset * (cfg.sample_rate / cfg.hop_length) // pooling_time_ratio
-    validation_dataset = DataLoadDf(eval_2018_df, dataset.get_feature_file, many_hot_encoder.encode_strong_df,
-                                    transform=transforms_valid)
+    eval_2018 = DataLoadDf(eval_2018_df, dataset.get_feature_file, many_hot_encoder.encode_strong_df,
+                           transform=transforms_valid)
     weak_metric = get_f_measure_by_class(crnn, len(classes), DataLoader(eval_2018, batch_size=cfg.batch_size))
     LOG.info("2018: ")
     LOG.info(eval2018_metric)
@@ -323,8 +327,8 @@ if __name__ == '__main__':
                                   save_predictions=predicitons_fname)
     predictions.onset = predictions.onset * pooling_time_ratio / (cfg.sample_rate / cfg.hop_length)
     predictions.offset = predictions.offset * pooling_time_ratio / (cfg.sample_rate / cfg.hop_length)
-    metric = event_based_evaluation_df(validation_df, predictions)
-    metric_seg = segment_based_evaluation_df(validation_df, predictions)
+    metric = event_based_evaluation_df(validation_df, predictions, t_collar=0.200, percentage_of_length=0.2)
+    metric_seg = segment_based_evaluation_df(validation_df, predictions, time_resolution=1.)
 
     validation_df.onset = validation_df.onset * (cfg.sample_rate / cfg.hop_length) // pooling_time_ratio
     validation_df.offset = validation_df.offset * (cfg.sample_rate / cfg.hop_length) // pooling_time_ratio

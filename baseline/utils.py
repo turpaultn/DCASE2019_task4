@@ -49,10 +49,16 @@ class ManyHotEncoder:
             if labels == "empty":
                 y = np.zeros(len(self.labels)) - 1
                 return y
+        if type(labels) is pd.DataFrame:
+            if labels.empty:
+                labels = []
+            elif "event_label" in labels.columns:
+                labels = labels["event_label"]
         y = np.zeros(len(self.labels))
         for label in labels:
-            i = self.labels.index(label)
-            y[i] = 1
+            if not pd.isna(label):
+                i = self.labels.index(label)
+                y[i] = 1
         return y
 
     def encode_strong_df(self, label_df):
