@@ -1,3 +1,9 @@
+# -*- coding: utf-8 -*-
+#########################################################################
+# Initial software
+# Copyright Nicolas Turpault, Romain Serizel, Justin Salamon, Ankit Parag Shah, 2019, v1.0
+# This software is distributed under the terms of the License MIT
+#########################################################################
 import bisect
 import itertools
 
@@ -106,9 +112,6 @@ class DataLoadDf(Dataset):
         if self.encode_function is not None:
             # labels are a list of string or list of list [[label, onset, offset]]
             y = self.encode_function(label)
-            # if frames is not None, it does not work for strong labels,
-            # because we will have all the labels and not only ones from the frame
-            # Todo, change this function or put always weak labels when frames not None
         else:
             y = label
         sample = features, y
@@ -154,9 +157,11 @@ class DataLoadDf(Dataset):
 class GaussianNoise:
     """ Apply gaussian noise
         Args:
-            nb_frames: int, the number of frames to match
+            mean: float, the mean of the gaussian distribution.
+            std: float, standard deviation of the gaussian distribution.
         Attributes:
-            nb_frames: int, the number of frames to match
+            mean: float, the mean of the gaussian distribution.
+            std: float, standard deviation of the gaussian distribution.
         """
 
     def __init__(self, mean=0, std=0.5):
@@ -282,50 +287,6 @@ class AugmentGaussianNoise:
         return sample, noise, label
 
 
-class AugmentShiftTruncFreq:
-    """ Pad or truncate a sequence given a number of frames
-           Args:
-               mean: float, mean of the Gaussian noise to add
-           Attributes:
-               std: float, std of the Gaussian noise to add
-           """
-
-    def __init__(self, nshift=None):
-        self.nshift = nshift
-
-    def trunc(self, features):
-        """ Apply a frequency trunc on the data
-
-        Args:
-            features: numpy.array, features to be modified
-        Returns:
-            numpy.ndarray
-            Modified features
-        """
-        shift_value = np.random.randint(-self.nshift, self.nshift)
-        if shift_value > 0:
-            X_new = np.pad(features, ((0, 0), (shift_value, 0)), mode='constant')[:, :-shift_value]
-        else:
-            shift_value = -shift_value
-            X_new = np.pad(features, ((0, 0), (0, shift_value)), mode='constant')[:, shift_value:]
-        return X_new
-
-    def __call__(self, sample):
-        """ Apply the transformation
-        Args:
-            sample: tuple or list, a sample defined by a DataLoad class
-
-        Returns:
-            list
-            The transformed tuple
-        """
-        sample, label = sample
-
-        trans = self.trunc(sample)
-
-        return sample, trans, label
-
-
 class ToTensor(object):
     """Convert ndarrays in sample to Tensors.
     Args:
@@ -389,61 +350,11 @@ class Normalize(object):
         return sample
 
 
-# class GetEmbedding:
-#     """Get an embedding from a CNN trained
-#         Args:
-#             cnn_model: derived nn.Module object, the model to get the embedding from.
-#             nb_frames_to_reshape: int, reshape the input dividing the actual nb of frames by this number of frames and
-#             apply the model on the created inputs and get back to the original size.
-#         Attributes:
-#             cnn_model: derived nn.Module object, the model to get the embedding from.
-#             nb_frames_to_reshape: int, reshape the input dividing the actual nb of frames by this number of frames and
-#             apply the model on the created inputs and get back to the original size.
-#         """
-#     def __init__(self, cnn_model, nb_frames_to_reshape=None):
-#         self.triplet_model = cnn_model
-#         self.nb_frames = nb_frames_to_reshape
-#
-#     def __call__(self, sample):
-#         """ Apply the transformation
-#         Args:
-#             sample: tuple, a sample defined by a DataLoad class
-#
-#         Returns:
-#             tuple
-#             The transformed tuple
-#         """
-#         if type(sample) is tuple:
-#             sample = list(sample)
-#
-#         for k in range(len(sample) - 1):
-#             samp = sample[k]
-#             if self.nb_frames:
-#                 original_nb_frames = samp.shape[-2]
-#                 samp = samp.unsqueeze(0)
-#                 samp = change_view_frames(samp, self.nb_frames)
-#
-#             embed = self.triplet_model(samp)
-#             if self.nb_frames is not None:
-#                 embed = change_view_frames(embed, original_nb_frames)
-#             embed = embed.squeeze(-1)
-#             embed = embed.squeeze(0)
-#             embed = embed.permute(1, 0)  # inverse frames and channel (frames, channel)
-#
-#             sample[k] = embed.detach()
-#
-#         return sample
-
-
 class Compose(object):
     """Composes several transforms together.
     Args:
         transforms: list of ``Transform`` objects, list of transforms to compose.
-    Example:
-        >>> transforms.Compose([
-        >>> transforms.Scale(),
-        >>> transforms.PadTrim(max_len=16000),
-        >>> ])
+        Example of transform: ToTensor()
     """
 
     def __init__(self, transforms):
@@ -534,7 +445,7 @@ class Subset(DataLoadDf):
 
     Args:
         dataload_df: DataLoadDf or similar, dataset to be split
-    indices: sequence, list of indices to keep in this subset
+        indices: sequence, list of indices to keep in this subset
     """
     def __init__(self, dataload_df, indices):
         self.indices = indices
@@ -638,6 +549,7 @@ class MultiStreamBatchSampler(Sampler):
     """
 
     def __init__(self, data_source, batch_sizes, shuffle=True):
+        super(MultiStreamBatchSampler, self).__init__(data_source)
         self.data_source = data_source
         self.batch_sizes = batch_sizes
         l_bs = len(batch_sizes)

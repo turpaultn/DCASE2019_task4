@@ -1,6 +1,11 @@
+# -*- coding: utf-8 -*-
+#########################################################################
+# Part of this file is derived from Curious AI/mean-teacher, under the Creative Commons Attribution-NonCommercial
+# Part of this file is derived from pytorch library.
+# Copyright Nicolas Turpault, Romain Serizel, Justin Salamon, Ankit Parag Shah, 2019, v1.0
+# This software is distributed under the terms of the License MIT
+#########################################################################
 from __future__ import print_function
-
-import warnings
 
 import numpy as np
 import pandas as pd
@@ -178,16 +183,6 @@ def read_audio(path, target_fs=None):
     return audio, fs
 
 
-def write_audio(path, audio, sample_rate):
-    """ Save an audio file
-    Args:
-        path: str, path used to store the audio
-        audio: numpy.array, audio data to store
-        sample_rate: int, the sampling rate
-    """
-    soundfile.write(file=path, data=audio, samplerate=sample_rate)
-
-
 def create_folder(fd):
     """ Create folders of a path if not exists
     Args:
@@ -231,21 +226,6 @@ def to_cuda_if_available(list_args):
     if torch.cuda.is_available():
         for i in range(len(list_args)):
             list_args[i] = list_args[i].cuda()
-    return list_args
-
-
-def to_cpu(list_args):
-    """ Transfer object (Module, Tensor) to CPU if GPU available
-        Args:
-            list_args: list, list of objects to put on CPU (if not already)
-
-        Returns:
-            list
-            Objects on CPU
-        """
-    if torch.cuda.is_available():
-        for i in range(len(list_args)):
-            list_args[i] = list_args[i].cpu()
     return list_args
 
 
@@ -344,110 +324,6 @@ class EarlyStopping:
         return False
 
 
-def change_view_frames(array, nb_frames):
-    array = array.view(-1, array.shape[1], nb_frames, array.shape[-1])
-    return array
-
-
-def save_model(state, filename=None, overwrite=True):
-    """ Function to save Pytorch models.
-    # Argument
-        dic_params: Dict. Must includes "model" (and possibly "optimizer")which is a dict with "name","args","kwargs",
-        example:
-        state = {
-                 'epoch': epoch_ + 1,
-                 'model': {"name": classif_model.get_name(),
-                           'args': rnn_args,
-                           "kwargs": rnn_kwargs,
-                           'state_dict': classif_model.state_dict()},
-                 'optimizer': {"name": classif_model.get_name(),
-                               'args': '',
-                               "kwargs": optim_kwargs,
-                               'state_dict': optimizer_classif.state_dict()},
-                 'loss': loss_mean_bce
-                 }
-        filename: String. Where to save the model.
-        overwrite: Bool. Whether to overwrite existing file or not.
-    # Raises
-        Warning if filename exists and overwrite isn't set to True.
-    """
-    if os.path.isfile(filename):
-        if overwrite:
-            os.remove(filename)
-            torch.save(state, filename)
-        else:
-            warnings.warn('Found existing file at {}'.format(filename) +
-                          'specify `overwrite=True` if you want to overwrite it')
-    else:
-        torch.save(state, filename)
-
-
-# ##################
-# MANDATORY FOR get_class to work !!!!!!
-# It puts the name of the class in globals()
-# ###################
-# from models.CNN import CNN
-# from models.CRNN import CRNN
-# from torch.optim import Adam, Adadelta
-# def get_class(name):
-#     try:
-#         cls = globals()[name]
-#     except KeyError as ke:
-#         raise KeyError("Impossible to load the object from a string, check the class name and "
-#                        "if the situation is covered")
-#     return cls
-
-
-# def load_model(filename, ema=False, return_optimizer=False, return_state=False):
-#     """ Function to load Pytorch models.
-#     # Argument
-#         filename: String. Where to load the model from.
-#         example:
-#         state = {
-#                  'epoch': epoch_ + 1,
-#                  'model': {"name": classif_model.get_name(),
-#                            'args': rnn_args,
-#                            "kwargs": rnn_kwargs,
-#                            'state_dict': classif_model.state_dict()},
-#                  'optimizer': {"name": classif_model.get_name(),
-#                                'args': '',
-#                                "kwargs": optim_kwargs,
-#                                'state_dict': optimizer_classif.state_dict()},
-#                  'loss': loss_mean_bce
-#                  }
-#         return_optimizer: Bool. Whether to return optimizer or not.
-#     # Returns
-#         A Pytorch model instance.
-#         An Pytorch optimizer instance.
-#     """
-#     state = torch.load(filename)
-#
-#     def get_model(model_key):
-#         model = get_class(state[model_key]["name"])(*state[model_key]['args'],
-#                                                     **state[model_key]['kwargs'])
-#         # Assuming we load model
-#         model.load(parameters=state[model_key['state_dict']])
-#         return model
-#
-#     model = get_model("model")
-#     to_return = (model,)
-#     if ema:
-#         model_ema = get_model("model_ema")
-#
-#     if return_optimizer:
-#         optimizer = get_class(state["optimizer"]["name"])(filter(lambda p: p.requires_grad, model.parameters()),
-#                                                           *state['optimizer']['args'],
-#                                                           **state['optimizer']['kwargs'])
-#         optimizer.load_state_dict(state['optimizer']['state_dict'])
-#         if return_state:
-#             return model, optimizer, state
-#         return model, optimizer
-#     else:
-#         if return_state:
-#             return model, state
-#         return model
-#
-
 class AverageMeterSet:
     def __init__(self):
         self.meters = {}
@@ -475,6 +351,15 @@ class AverageMeterSet:
 
     def counts(self, postfix='/count'):
         return {name + postfix: meter.count for name, meter in self.meters.items()}
+
+    def __str__(self):
+        string = ""
+        for name, meter in self.meters.items():
+            format = ".4f"
+            if meter.val < 0.01:
+                format = ".2E"
+            string += "{} {:{format}} \t".format(name, meter.val, format=format)
+        return string
 
 
 class AverageMeter:

@@ -1,9 +1,8 @@
 import math
 import os
-
 import pandas as pd
 
-workspace = ".."
+workspace = ""
 # Dataset Paths
 weak = 'dataset/metadata/train/weak.csv'
 unlabel = 'dataset/metadata/train/unlabel_in_domain.csv'
@@ -33,24 +32,10 @@ beta2_after_rampup = 0.999
 weight_decay_during_rampup = 0.99
 weight_decay_after_rampup = 0.999
 
-decay_step = 100*1000
-decay_rate = 0.1
-
-logit_distance_cost = 0.01
-
-train_iter_count = 20000
-
-rampup_length = 0 # int(0.5 * train_iter_count)
-rampdown_length = 0 # int(0.1 * train_iter_count)
-
 max_consistency_cost = 10
 max_learning_rate = 0.001
 
-
-
-
-
-median_window = 20
+median_window = 5
 
 # Main
 num_workers = 12
@@ -59,19 +44,15 @@ n_epoch = 100
 
 checkpoint_epochs = 1
 
-early_stopping = None
-model_checkpoint = 1
 save_best = True
 
-dropout = 0.5
-activation = "glu"
+file_path = os.path.abspath(os.path.dirname(__file__))
+classes = pd.read_csv(os.path.join(file_path, "..", validation), sep="\t").event_label.dropna().unique()
 
-best_threshold_weak = True
-
-classes = pd.read_csv(os.path.join(workspace, validation), sep="\t").event_label.unique()
 crnn_kwargs = {"n_in_channel": 1, "nclass": len(classes), "attention": True, "n_RNN_cell": 64,
                "n_layers_RNN": 2,
-                "activation": activation,
-                "dropout": dropout, "kernel_size": 3 * [3], "padding": 3 * [1], "stride": 3 * [1],
-                "nb_filters": [64, 64, 64],
+                "activation": "glu",
+                "dropout": 0.5,
+               "kernel_size": 3 * [3], "padding": 3 * [1], "stride": 3 * [1], "nb_filters": [64, 64, 64],
                 "pooling": list(3 * ((2, 4),))}
+pooling_time_ratio = 8  # 2 * 2 * 2

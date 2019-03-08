@@ -84,18 +84,16 @@ class DatasetDcase2019Task4:
         if not self.save_log_feature:
             feature_dir += "_nolog"
 
-        # self.meta_features = os.path.join(feature_dir + "_sub" + str(subpart_data), "metadata")
         self.feature_dir = os.path.join(feature_dir, "features")
         # create folder if not exist
         create_folder(self.feature_dir)
-        # create_folder(self.meta_features)
 
     def intialize_and_get_df(self, csv_path, subpart_data=None, download=True):
         """ Initialize the dataset, extract the features dataframes
         Args:
             csv_path: str, csv path in the initial dataset
-            frames: int, the number of frames taken to segment the data.
             subpart_data: int, the number of file to take in the dataframe if taking a small part of the dataset.
+            download: bool, whether or not to download the data from the internet (youtube).
 
         Returns:
             pd.DataFrame
@@ -237,8 +235,7 @@ class DatasetDcase2019Task4:
         Args:
             csv_audio : str, file containing names, durations and labels : (name, start, end, label, label_index)
                 the associated wav_filename is Yname_start_end.wav
-            csv_features: str, filename where to store the new csv with the features characteristic
-            frames: int, number of frames to take for a subsegment.
+            subpart_data: int, number of files to extract features from the csv.
         """
         t1 = time.time()
         df_meta = self.get_df_from_meta(csv_audio, subpart_data)

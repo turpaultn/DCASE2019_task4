@@ -1,3 +1,4 @@
+# File taken from Curious AI: see license below
 # Copyright (c) 2018, Curious AI Ltd. All rights reserved.
 #
 # This work is licensed under the Creative Commons Attribution-NonCommercial

@@ -1,8 +1,7 @@
-# !/usr/bin/env python
 # -*- coding: utf-8 -*-
 #########################################################################
-# Initial software, Nicolas Turpault, Romain Serizel, Hamid Eghbal-zadeh, Ankit Parag Shah
-# Copyright © INRIA, 2018, v1.0
+# Initial software
+# Copyright Nicolas Turpault, Romain Serizel, Justin Salamon, Ankit Parag Shah, 2019, v1.0
 # This software is distributed under the terms of the License MIT
 #########################################################################
 import scipy
@@ -209,6 +208,47 @@ def macro_f_measure(tp, fp, fn):
     return macro_f_score
 
 
+def get_predictions(model, valid_dataset, decoder, save_predictions=None):
+    for i, (input, _) in enumerate(valid_dataset):
+        [input] = to_cuda_if_available([input])
+
+        pred_strong, _ = model(input.unsqueeze(0))
+        pred_strong = pred_strong.cpu()
+        pred_strong = pred_strong.squeeze(0).detach().numpy()
+        if i == 0:
+            LOG.debug(pred_strong)
+        pred_strong = ProbabilityEncoder().binarization(pred_strong, binarization_type="global_threshold",
+                                                        threshold=0.5)
+        pred_strong = scipy.ndimage.filters.median_filter(pred_strong, (cfg.median_window, 1))
+        pred = decoder(pred_strong)
+        pred = pd.DataFrame(pred, columns=["event_label", "onset", "offset"])
+        pred["filename"] = valid_dataset.filenames.iloc[i]
+        if i == 0:
+            LOG.debug("predictions: \n{}".format(pred))
+            LOG.debug("predictions strong: \n{}".format(pred_strong))
+            prediction_df = pred.copy()
+        else:
+            prediction_df = prediction_df.append(pred)
+
+    if save_predictions is not None:
+        LOG.info("Saving predictions at: {}".format(save_predictions))
+        prediction_df.to_csv(save_predictions, index=False)
+    return prediction_df
+
+
+def compute_strong_metrics(predictions, valid_df, pooling_time_ratio):
+    # In seconds
+    predictions.onset = predictions.onset * pooling_time_ratio / (cfg.sample_rate / cfg.hop_length)
+    predictions.offset = predictions.offset * pooling_time_ratio / (cfg.sample_rate / cfg.hop_length)
+
+    metric_event = event_based_evaluation_df(valid_df, predictions, t_collar=0.200,
+                                                      percentage_of_length=0.2)
+    metric_segment = segment_based_evaluation_df(valid_df, predictions, time_resolution=1.)
+    LOG.info(metric_event)
+    LOG.info(metric_segment)
+    return metric_event
+
+
 def format_df(df, mhe):
     def join_labels(x):
         return pd.Series(dict(filename = x['filename'].iloc[0],
@@ -255,31 +295,3 @@ def audio_tagging_results(reference, estimated):
 
     results_serie = pd.DataFrame(macro_res, index=mhe.labels)
     return results_serie[0]
-
-
-def get_predictions(model, valid_dataset, decoder, save_predictions=None):
-    for i, (input, _) in enumerate(valid_dataset):
-        [input] = to_cuda_if_available([input])
-
-        pred_strong, _ = model(input.unsqueeze(0))
-        pred_strong = pred_strong.cpu()
-        pred_strong = pred_strong.squeeze(0).detach().numpy()
-        if i == 0:
-            LOG.debug(pred_strong)
-        pred_strong = ProbabilityEncoder().binarization(pred_strong, binarization_type="global_threshold",
-                                                        threshold=0.5)
-        pred_strong = scipy.ndimage.filters.median_filter(pred_strong, (cfg.median_window, 1))
-        pred = decoder(pred_strong)
-        pred = pd.DataFrame(pred, columns=["event_label", "onset", "offset"])
-        pred["filename"] = valid_dataset.filenames.iloc[i]
-        if i == 0:
-            LOG.debug("predictions: \n{}".format(pred))
-            LOG.debug("predictions strong: \n{}".format(pred_strong))
-            prediction_df = pred.copy()
-        else:
-            prediction_df = prediction_df.append(pred)
-
-    if save_predictions is not None:
-        LOG.info("Saving predictions at: {}".format(save_predictions))
-        prediction_df.to_csv(save_predictions, index=False)
-    return prediction_df

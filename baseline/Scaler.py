@@ -2,10 +2,8 @@ import time
 import logging
 import numpy as np
 import torch
-import config as cfg
 import json
-
-logger = logging.getLogger("sed")
+from Logger import LOG
 
 
 class Scaler(object):
@@ -38,7 +36,7 @@ class Scaler(object):
        Splits a dataset in to train test validation.
        :param dataset: dataset, from DataLoad class, each sample is an (X, y) tuple.
        """
-        logger.info('computing mean')
+        LOG.info('computing mean')
         start = time.time()
 
         shape = None
@@ -85,7 +83,7 @@ class Scaler(object):
         #     mean = mean * (1 - weight) + self.mean(X, axis=-1) * weight
         #     mean_of_square = mean_of_square * (1 - weight) + self.mean(data_square, axis=-1) * weight
 
-        logger.debug('time to compute means: ' + str(time.time() - start))
+        LOG.debug('time to compute means: ' + str(time.time() - start))
         return self
 
     def std(self, variance):
@@ -123,33 +121,3 @@ class Scaler(object):
         self.mean_of_square_ = np.array(dict_save["mean_of_square_"])
         variance = self.variance(self.mean_, self.mean_of_square_)
         self.std_ = self.std(variance)
-
-
-if __name__ == '__main__':
-    from DatasetDcase2019Task4 import DatasetDcase2018Task4
-    from utils import ManyHotEncoder
-    from DataLoad import ToTensor, DataLoadDf
-    import math
-    from torch.utils.data import DataLoader
-
-    dataset = DatasetDcase2018Task4("dcase2018", base_feature_dir="dcase2018/features")
-
-    batch_size = 4
-    max_frames = math.ceil(10 * cfg.sample_rate / cfg.hop_length)  # assuming max 10 sec
-    n_epoch = 10
-    classes = np.unique(dataset.get_df_from_meta(dataset.test)["event_label"])
-    n_class = len(classes)
-
-    test_df = dataset.initialize_and_get_df(dataset.test, max_frames)
-    many_hot_encoder = ManyHotEncoder(classes, n_frames=max_frames)
-    try_dataset = DataLoadDf(test_df, dataset.get_feature_file, many_hot_encoder.encode_strong_df,
-                                 transform=ToTensor())
-    dataloader = DataLoader(try_dataset, batch_size=batch_size, shuffle=True, num_workers=4, drop_last=True)
-
-    scaler = Scaler()
-    scaler.calculate_scaler(dataloader)
-    print(scaler.mean_)
-    print(scaler.std_)
-    try_dataset.transform = ToTensor(unsqueeze_axis=0)
-    # train_loader = DataLoader(weak_dataset, batch_size=batch_size, shuffle=True, num_workers=4)
-    print(scaler.normalize(next(iter(dataloader))[0]))
