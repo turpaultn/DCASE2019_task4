@@ -134,7 +134,7 @@ def train(train_loader, model, ema_model, optimizer, epoch, global_step):
         loss.backward()
         optimizer.step()
         global_step += 1
-        # update_ema_variables(model, ema_model, 0.999, global_step)
+        update_ema_variables(model, ema_model, 0.999, global_step)
 
     meters.update('epoch_time', time.time() - start)
 

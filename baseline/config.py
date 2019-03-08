@@ -42,8 +42,8 @@ rampdown_length = 0 # int(0.1 * train_iter_count)
 
 max_consistency_cost = 100.
 max_learning_rate = 0.001
-consistency_weak = 1.
-consistency_strong = 1.
+consistency_weak = 10
+consistency_strong = 10
 consistency_rampup = 10
 
 
@@ -55,7 +55,7 @@ median_window = 20
 
 # Main
 num_workers = 12
-batch_size = 4
+batch_size = 32
 n_epoch = 100
 
 checkpoint_epochs = 1
