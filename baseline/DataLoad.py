@@ -10,7 +10,6 @@ import warnings
 from torch.utils.data import Dataset
 from torch.utils.data.sampler import Sampler
 
-from utils import pad_trunc_seq
 from Logger import LOG
 
 torch.manual_seed(0)
@@ -203,6 +202,29 @@ class ApplyLog(object):
         return sample
 
 
+def pad_trunc_seq(x, max_len):
+    """Pad or truncate a sequence data to a fixed length.
+
+    Args:
+      x: ndarray, input sequence data.
+      max_len: integer, length of sequence to be padded or truncated.
+
+    Returns:
+      ndarray, Padded or truncated input sequence data.
+    """
+    length = len(x)
+    shape = x.shape
+    if length < max_len:
+        pad_shape = (max_len - length,) + shape[1:]
+        pad = np.zeros(pad_shape)
+        x_new = np.concatenate((x, pad), axis=0)
+    elif length > max_len:
+        x_new = x[0:max_len]
+    else:
+        x_new = x
+    return x_new
+
+
 class PadOrTrunc:
     """ Pad or truncate a sequence given a number of frames
     Args:
@@ -228,9 +250,6 @@ class PadOrTrunc:
         # sample must be a tuple or a list
         for k in range(len(sample) - 1):
             sample[k] = pad_trunc_seq(sample[k], self.nb_frames)
-
-        # if len(sample[-1].shape) == 2:
-        #     sample[-1] = pad_trunc_seq(sample[-1], self.nb_frames)
 
         return sample
 

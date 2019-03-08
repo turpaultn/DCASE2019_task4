@@ -191,29 +191,6 @@ def create_folder(fd):
         os.makedirs(fd)
 
 
-def pad_trunc_seq(x, max_len):
-    """Pad or truncate a sequence data to a fixed length.
-
-    Args:
-      x: ndarray, input sequence data.
-      max_len: integer, length of sequence to be padded or truncated.
-
-    Returns:
-      ndarray, Padded or truncated input sequence data.
-    """
-    length = len(x)
-    shape = x.shape
-    if length < max_len:
-        pad_shape = (max_len - length,) + shape[1:]
-        pad = np.zeros(pad_shape)
-        x_new = np.concatenate((x, pad), axis=0)
-    elif length > max_len:
-        x_new = x[0:max_len]
-    else:
-        x_new = x
-    return x_new
-
-
 def weights_init(m):
     """ Initialize the weights of some layers of neural networks, here Conv2D, BatchNorm, GRU, Linear
         Based on the work of Xavier Glorot
