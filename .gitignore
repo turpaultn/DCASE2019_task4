@@ -7,8 +7,8 @@ __pycache__/
 tmp/
 features/
 missing_files/
+stored_data/
 
-baseline/stored_data/
 baseline/test/
 
 dataset/audio/
