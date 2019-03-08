@@ -154,7 +154,7 @@ def train(train_loader, model, ema_model, optimizer, epoch, global_step):
     return global_step
 
 
-def get_predictions(model, valid_dataset, decoder, in_seconds=True, save_predictions=None):
+def get_predictions(model, valid_dataset, decoder, save_predictions=None):
     for i, (input, _) in enumerate(valid_dataset):
         [input] = to_cuda_if_available([input])
 
@@ -175,9 +175,6 @@ def get_predictions(model, valid_dataset, decoder, in_seconds=True, save_predict
         else:
             prediction_df = prediction_df.append(pred)
 
-    if in_seconds:
-        prediction_df.onset = prediction_df.onset / (cfg.sample_rate / cfg.hop_length)
-        prediction_df.offset = prediction_df.offset / (cfg.sample_rate / cfg.hop_length)
     if save_predictions is not None:
         LOG.info("Saving predictions at: {}".format(save_predictions))
         prediction_df.to_csv(save_predictions, index=False)
@@ -220,6 +217,7 @@ if __name__ == '__main__':
     create_folder(saved_model_dir)
     create_folder(saved_pred_dir)
 
+    pooling_time_ratio = 8
     # ##############
     # DATA
     # ##############
@@ -234,7 +232,7 @@ if __name__ == '__main__':
     validation_df = dataset.intialize_and_get_df(cfg.validation, reduced_number_of_data)
 
     classes = DatasetDcase2019Task4.get_classes([weak_df, validation_df, synthetic_df])
-    many_hot_encoder = ManyHotEncoder(classes, n_frames=max_frames)
+    many_hot_encoder = ManyHotEncoder(classes, n_frames=max_frames//pooling_time_ratio)
 
     transforms = get_transforms(max_frames)
 
@@ -251,8 +249,8 @@ if __name__ == '__main__':
 
     # Put train_synth in frames so many_hot_encoder can work.
     #  Not doing it for valid, because not using labels (when prediction) and event based metric expect sec.
-    train_synth_df.onset = train_synth_df.onset * cfg.sample_rate // cfg.hop_length
-    train_synth_df.offset = train_synth_df.offset * cfg.sample_rate // cfg.hop_length
+    train_synth_df.onset = train_synth_df.onset * cfg.sample_rate // cfg.hop_length // pooling_time_ratio
+    train_synth_df.offset = train_synth_df.offset * cfg.sample_rate // cfg.hop_length // pooling_time_ratio
     LOG.debug(valid_synth_df.event_label.value_counts())
 
     train_weak_data = DataLoadDf(train_weak_df, dataset.get_feature_file, many_hot_encoder.encode_strong_df,
@@ -288,8 +286,12 @@ if __name__ == '__main__':
     # ##############
     # Model
     # ##############
-    crnn_kwargs = {"n_in_channel": 1, "nclass":len(classes), "activation": "Relu",
-                   "dropout": cfg.dropout}
+    crnn_kwargs = {"n_in_channel": 1, "nclass": len(classes), "attention": True, "n_RNN_cell": 128,
+                   "n_layers_RNN": 2,
+                   "activation": cfg.activation,
+                   "dropout": cfg.dropout, "kernel_size": 7 * [3], "padding": 7 * [1], "stride": 7 * [1],
+                   "nb_filters": [16, 32, 64 , 128, 128, 128, 256],
+                   "pooling": list(3 * ((2, 4),) + 3 * ((1, 2),) + ((1, 4),))}
     crnn = CRNN(**crnn_kwargs)
     crnn_ema = CRNN(**crnn_kwargs)
 
@@ -336,6 +338,8 @@ if __name__ == '__main__':
         crnn = crnn.eval()
         predictions = get_predictions(crnn, valid_synth_data, many_hot_encoder.decode_strong,
                                       save_predictions=None)
+        predictions.onset = predictions.onset * pooling_time_ratio / (cfg.sample_rate / cfg.hop_length)
+        predictions.offset = predictions.offset * pooling_time_ratio / (cfg.sample_rate / cfg.hop_length)
 
         valid_metric = event_based_evaluation_df(valid_synth_df, predictions)
         weak_metric = get_f_measure_by_class(crnn, len(classes),
@@ -375,6 +379,8 @@ if __name__ == '__main__':
     predicitons_fname = os.path.join(saved_pred_dir, "baseline_validation.csv")
     predictions = get_predictions(crnn, validation_dataset, many_hot_encoder.decode_strong,
                                   save_predictions=predicitons_fname)
+    predictions.onset = predictions.onset * pooling_time_ratio / (cfg.sample_rate / cfg.hop_length)
+    predictions.offset = predictions.offset * pooling_time_ratio / (cfg.sample_rate / cfg.hop_length)
     metric = event_based_evaluation_df(validation_df, predictions)
     LOG.info("FINAL predictions")
     LOG.info(metric)

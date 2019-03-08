@@ -41,23 +41,23 @@ def train(train_loader, model, optimizer, epoch):
         # Weak BCE Loss
         # Trick to not take unlabeled data
         # Todo figure out another way
-        # target_weak = target.max(-2)[0]
-        # weak_class_loss = class_criterion(weak_pred, target_weak)
+        target_weak = target.max(-2)[0]
+        weak_class_loss = class_criterion(weak_pred, target_weak)
         if i == 1:
             LOG.debug("target: {}".format(target.mean(-2)))
-        #     LOG.debug("Target_weak: {}".format(target_weak))
-        #     LOG.debug(weak_class_loss)
-        # meters.update('weak_class_loss', weak_class_loss.item())
-        #
-        # loss = weak_class_loss
+            LOG.debug("Target_weak: {}".format(target_weak))
+            LOG.debug(weak_class_loss)
+        meters.update('weak_class_loss', weak_class_loss.item())
+
+        loss = weak_class_loss
 
         # Strong BCE loss
-        # strong_size = train_loader.batch_sampler.batch_sizes[-1]
-        # strong_class_loss = class_criterion(strong_pred[-strong_size:], target[-strong_size:])
+        strong_size = train_loader.batch_sampler.batch_sizes[-1]
+        strong_class_loss = class_criterion(strong_pred[-strong_size:], target[-strong_size:])
         strong_class_loss = class_criterion(strong_pred, target)
         meters.update('strong_class_loss', strong_class_loss.item())
 
-        loss = strong_class_loss
+        loss += strong_class_loss
 
         assert not (np.isnan(loss.item()) or loss.item() > 1e5), 'Loss explosion: {}'.format(loss.item())
         assert not loss.item() < 0, 'Loss problem, cannot be negative'
@@ -237,8 +237,7 @@ if __name__ == '__main__':
         # Taking as much data from synthetic than strong.
         sampler = MultiStreamBatchSampler(concat_dataset,
                                           batch_sizes=[cfg.batch_size // 2, cfg.batch_size // 2])
-        # training_data = DataLoader(concat_dataset, batch_sampler=sampler)
-        training_data = DataLoader(train_synth_data, batch_size=cfg.batch_size // 2)
+        training_data = DataLoader(concat_dataset, batch_sampler=sampler)
         valid_synth_data = DataLoadDf(valid_synth_df, dataset.get_feature_file, many_hot_encoder.encode_strong_df,
                                       transform=transforms_valid)
         valid_weak_data = DataLoadDf(valid_weak_df, dataset.get_feature_file, many_hot_encoder.encode_strong_df,
@@ -331,6 +330,8 @@ if __name__ == '__main__':
     predicitons_fname = os.path.join(saved_pred_dir, "baseline_validation.csv")
     predictions = get_predictions(crnn, validation_dataset, many_hot_encoder.decode_strong,
                                   save_predictions=predicitons_fname)
+    predictions.onset = predictions.onset * pooling_time_ratio / (cfg.sample_rate / cfg.hop_length)
+    predictions.offset = predictions.offset * pooling_time_ratio / (cfg.sample_rate / cfg.hop_length)
     metric = event_based_evaluation_df(validation_df, predictions)
     LOG.info("FINAL predictions")
     LOG.info(metric)
