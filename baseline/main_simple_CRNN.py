@@ -88,10 +88,11 @@ def get_predictions(model, valid_dataset, decoder, save_predictions=None):
         pred_strong, _ = model(input.unsqueeze(0))
         pred_strong = pred_strong.cpu()
         pred_strong = pred_strong.squeeze(0).detach().numpy()
-        LOG.debug(pred_strong)
+        if i == 0:
+            LOG.debug(pred_strong)
         pred_strong = ProbabilityEncoder().binarization(pred_strong, binarization_type="global_threshold",
                                                         threshold=0.5)
-        LOG.debug(pred_strong.mean(-2))
+        #LOG.debug(pred_strong.mean(-2))
         pred_strong = scipy.ndimage.filters.median_filter(pred_strong, (cfg.median_window, 1))
         pred = decoder(pred_strong)
         pred = pd.DataFrame(pred, columns=["event_label", "onset", "offset"])
@@ -237,7 +238,7 @@ if __name__ == '__main__':
         sampler = MultiStreamBatchSampler(concat_dataset,
                                           batch_sizes=[cfg.batch_size // 2, cfg.batch_size // 2])
         # training_data = DataLoader(concat_dataset, batch_sampler=sampler)
-        training_data = DataLoader(train_synth_data, batch_size=4)
+        training_data = DataLoader(train_synth_data, batch_size=cfg.batch_size // 2)
         valid_synth_data = DataLoadDf(valid_synth_df, dataset.get_feature_file, many_hot_encoder.encode_strong_df,
                                       transform=transforms_valid)
         valid_weak_data = DataLoadDf(valid_weak_df, dataset.get_feature_file, many_hot_encoder.encode_strong_df,

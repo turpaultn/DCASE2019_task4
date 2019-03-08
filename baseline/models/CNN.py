@@ -64,7 +64,7 @@ class CNN(nn.Module):
         # 128x862x64
         for i in range(len(nb_filters)):
             conv(i, batch_norm, conv_dropout, activ=activation)
-            cnn.add_module('pooling{0}'.format(i), nn.MaxPool2d(pooling[i]))  # bs x tframe x mels
+            cnn.add_module('pooling{0}'.format(i), nn.AvgPool2d(pooling[i]))  # bs x tframe x mels
 
         self.cnn = cnn
 
