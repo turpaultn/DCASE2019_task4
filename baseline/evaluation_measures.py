@@ -5,13 +5,16 @@
 # Copyright © INRIA, 2018, v1.0
 # This software is distributed under the terms of the License MIT
 #########################################################################
-
+import scipy
 from dcase_util.data import ProbabilityEncoder
 import sed_eval
 import numpy as np
 import pandas as pd
 import torch
-from utils import ManyHotEncoder
+
+import config as cfg
+from Logger import LOG
+from utils import ManyHotEncoder, to_cuda_if_available
 
 
 def get_f_measure_by_class(torch_model, nb_tags, dataloader_, thresholds_=None):
@@ -252,3 +255,31 @@ def audio_tagging_results(reference, estimated):
 
     results_serie = pd.DataFrame(macro_res, index=mhe.labels)
     return results_serie[0]
+
+
+def get_predictions(model, valid_dataset, decoder, save_predictions=None):
+    for i, (input, _) in enumerate(valid_dataset):
+        [input] = to_cuda_if_available([input])
+
+        pred_strong, _ = model(input.unsqueeze(0))
+        pred_strong = pred_strong.cpu()
+        pred_strong = pred_strong.squeeze(0).detach().numpy()
+        if i == 0:
+            LOG.debug(pred_strong)
+        pred_strong = ProbabilityEncoder().binarization(pred_strong, binarization_type="global_threshold",
+                                                        threshold=0.5)
+        pred_strong = scipy.ndimage.filters.median_filter(pred_strong, (cfg.median_window, 1))
+        pred = decoder(pred_strong)
+        pred = pd.DataFrame(pred, columns=["event_label", "onset", "offset"])
+        pred["filename"] = valid_dataset.filenames.iloc[i]
+        if i == 0:
+            LOG.debug("predictions: \n{}".format(pred))
+            LOG.debug("predictions strong: \n{}".format(pred_strong))
+            prediction_df = pred.copy()
+        else:
+            prediction_df = prediction_df.append(pred)
+
+    if save_predictions is not None:
+        LOG.info("Saving predictions at: {}".format(save_predictions))
+        prediction_df.to_csv(save_predictions, index=False)
+    return prediction_df

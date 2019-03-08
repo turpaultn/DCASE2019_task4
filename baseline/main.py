@@ -4,19 +4,17 @@ import pandas as pd
 import time
 import numpy as np
 
-import scipy
 import torch
-from dcase_util.data import ProbabilityEncoder
 from torch.utils.data import DataLoader
 
 from DatasetDcase2019Task4 import DatasetDcase2019Task4
-from DataLoad import DataLoadDf, ConcatDataset, ApplyLog, PadOrTrunc, ToTensor, Normalize, Compose, \
-    MultiStreamBatchSampler, AugmentGaussianNoise
+from DataLoad import DataLoadDf, ConcatDataset, MultiStreamBatchSampler
 from Scaler import Scaler
 from evaluation_measures import event_based_evaluation_df, get_f_measure_by_class, segment_based_evaluation_df
 from models.CRNN import CRNN
 import config as cfg
-from utils import ManyHotEncoder, AverageMeterSet, create_folder, SaveBest, to_cuda_if_available, weights_init
+from utils import ManyHotEncoder, AverageMeterSet, create_folder, SaveBest, to_cuda_if_available, weights_init, \
+    get_transforms
 import ramps
 from torch import nn
 from Logger import LOG
@@ -149,51 +147,6 @@ def train(train_loader, model, ema_model, optimizer, epoch, global_step):
         ''.format(
             epoch, meters=meters))
     return global_step
-
-
-def get_predictions(model, valid_dataset, decoder, save_predictions=None):
-    for i, (input, _) in enumerate(valid_dataset):
-        [input] = to_cuda_if_available([input])
-
-        pred_strong, _ = model(input.unsqueeze(0))
-        pred_strong = pred_strong.cpu()
-        pred_strong = pred_strong.squeeze(0).detach().numpy()
-        pred_strong = ProbabilityEncoder().binarization(pred_strong, binarization_type="global_threshold",
-                                                        threshold=0.5)
-
-        pred_strong = scipy.ndimage.filters.median_filter(pred_strong, (cfg.median_window, 1))
-        pred = decoder(pred_strong)
-        pred = pd.DataFrame(pred, columns=["event_label", "onset", "offset"])
-        pred["filename"] = valid_dataset.filenames.iloc[i]
-        if i == 0:
-            LOG.debug("predictions: \n{}".format(pred))
-            LOG.debug("predictions strong: \n{}".format(pred_strong))
-            prediction_df = pred.copy()
-        else:
-            prediction_df = prediction_df.append(pred)
-
-    if save_predictions is not None:
-        LOG.info("Saving predictions at: {}".format(save_predictions))
-        prediction_df.to_csv(save_predictions, index=False)
-    return prediction_df
-
-
-def get_transforms(frames, scaler=None, add_axis_conv=True, augment_type=None):
-    transf = []
-    unsqueeze_axis = None
-    if add_axis_conv:
-        unsqueeze_axis = 0
-
-    # Todo, add other augmentations
-    if augment_type is not None:
-        if augment_type == "noise":
-            transf.append(AugmentGaussianNoise(mean=0., std=0.5))
-
-    transf.extend([ApplyLog(), PadOrTrunc(nb_frames=frames), ToTensor(unsqueeze_axis=unsqueeze_axis)])
-    if scaler is not None:
-        transf.append(Normalize(scaler=scaler))
-
-    return Compose(transf)
 
 
 if __name__ == '__main__':

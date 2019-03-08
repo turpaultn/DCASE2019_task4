@@ -4,28 +4,24 @@ import pandas as pd
 import time
 import numpy as np
 
-import scipy
 import torch
-from dcase_util.data import ProbabilityEncoder
 from torch.utils.data import DataLoader
 
 from DatasetDcase2019Task4 import DatasetDcase2019Task4
-from DataLoad import DataLoadDf, ConcatDataset, ApplyLog, PadOrTrunc, ToTensor, Normalize, Compose, \
-    MultiStreamBatchSampler, AugmentGaussianNoise
+from DataLoad import DataLoadDf, ConcatDataset, MultiStreamBatchSampler
 from Scaler import Scaler
-from evaluation_measures import event_based_evaluation_df, get_f_measure_by_class, segment_based_evaluation_df
+from evaluation_measures import event_based_evaluation_df, get_f_measure_by_class, segment_based_evaluation_df, \
+    get_predictions
 from models.CRNN import CRNN
 import config as cfg
 from utils import ManyHotEncoder, AverageMeterSet, create_folder, SaveBest, to_cuda_if_available, weights_init
-import ramps
 from torch import nn
 from Logger import LOG
 
 
 def train(train_loader, model, optimizer, epoch):
     class_criterion = nn.BCELoss()
-    [class_criterion] = to_cuda_if_available(
-        [class_criterion])
+    [class_criterion] = to_cuda_if_available([class_criterion])
 
     meters = AverageMeterSet()
     meters.update('lr', optimizer.param_groups[0]['lr'])
@@ -79,53 +75,6 @@ def train(train_loader, model, optimizer, epoch):
         'Strong_loss {meters[strong_class_loss]:.4f}\t'
         ''.format(
             epoch, meters=meters))
-
-
-def get_predictions(model, valid_dataset, decoder, save_predictions=None):
-    for i, (input, _) in enumerate(valid_dataset):
-        [input] = to_cuda_if_available([input])
-
-        pred_strong, _ = model(input.unsqueeze(0))
-        pred_strong = pred_strong.cpu()
-        pred_strong = pred_strong.squeeze(0).detach().numpy()
-        if i == 0:
-            LOG.debug(pred_strong)
-        pred_strong = ProbabilityEncoder().binarization(pred_strong, binarization_type="global_threshold",
-                                                        threshold=0.5)
-        #LOG.debug(pred_strong.mean(-2))
-        pred_strong = scipy.ndimage.filters.median_filter(pred_strong, (cfg.median_window, 1))
-        pred = decoder(pred_strong)
-        pred = pd.DataFrame(pred, columns=["event_label", "onset", "offset"])
-        pred["filename"] = valid_dataset.filenames.iloc[i]
-        if i == 0:
-            LOG.debug("predictions: \n{}".format(pred))
-            LOG.debug("predictions strong: \n{}".format(pred_strong))
-            prediction_df = pred.copy()
-        else:
-            prediction_df = prediction_df.append(pred)
-
-    if save_predictions is not None:
-        LOG.info("Saving predictions at: {}".format(save_predictions))
-        prediction_df.to_csv(save_predictions, index=False)
-    return prediction_df
-
-
-def get_transforms(frames, scaler=None, add_axis_conv=True, augment_type=None):
-    transf = []
-    unsqueeze_axis = None
-    if add_axis_conv:
-        unsqueeze_axis = 0
-
-    # Todo, add other augmentations
-    if augment_type is not None:
-        if augment_type == "noise":
-            transf.append(AugmentGaussianNoise(mean=0., std=0.5))
-
-    transf.extend([ApplyLog(), PadOrTrunc(nb_frames=frames), ToTensor(unsqueeze_axis=unsqueeze_axis)])
-    if scaler is not None:
-        transf.append(Normalize(scaler=scaler))
-
-    return Compose(transf)
 
 
 if __name__ == '__main__':
@@ -285,7 +234,7 @@ if __name__ == '__main__':
 
             crnn = crnn.eval()
             train_predictions = get_predictions(crnn, train_synth_data, many_hot_encoder.decode_strong,
-                                          save_predictions=None)
+                                                save_predictions=None)
             train_predictions.onset = train_predictions.onset * pooling_time_ratio / (cfg.sample_rate / cfg.hop_length)
             train_predictions.offset = train_predictions.offset * pooling_time_ratio / (cfg.sample_rate / cfg.hop_length)
             train_metric = event_based_evaluation_df(train_synth_df, train_predictions)

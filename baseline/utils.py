@@ -11,6 +11,8 @@ import torch
 from torch import nn
 from dcase_util.data import DecisionEncoder
 
+from DataLoad import AugmentGaussianNoise, ApplyLog, PadOrTrunc, ToTensor, Normalize, Compose
+
 
 class ManyHotEncoder:
     """"
@@ -512,3 +514,21 @@ class AverageMeter:
 
     def __format__(self, format):
         return "{self.avg:{format}}".format(self=self, format=format)
+
+
+def get_transforms(frames, scaler=None, add_axis_conv=True, augment_type=None):
+    transf = []
+    unsqueeze_axis = None
+    if add_axis_conv:
+        unsqueeze_axis = 0
+
+    # Todo, add other augmentations
+    if augment_type is not None:
+        if augment_type == "noise":
+            transf.append(AugmentGaussianNoise(mean=0., std=0.5))
+
+    transf.extend([ApplyLog(), PadOrTrunc(nb_frames=frames), ToTensor(unsqueeze_axis=unsqueeze_axis)])
+    if scaler is not None:
+        transf.append(Normalize(scaler=scaler))
+
+    return Compose(transf)
