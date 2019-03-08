@@ -473,10 +473,10 @@ class ConcatDataset(Dataset):
     @property
     def cluster_indices(self):
         cluster_ind = []
-        count = 0
+        prec = 0
         for size in self.cumulative_sizes:
-            cluster_ind.append(range(count, size))
-            count += size
+            cluster_ind.append(range(prec, size))
+            prec = size
         return cluster_ind
 
     def __init__(self, datasets):
