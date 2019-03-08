@@ -371,6 +371,7 @@ if __name__ == '__main__':
     # ##############
     # Validation
     # ##############
+    crnn = crnn.eval()
     scaler = Scaler()
     scaler.load(scaler_path)
     transforms_valid = get_transforms(max_frames, scaler=scaler)
