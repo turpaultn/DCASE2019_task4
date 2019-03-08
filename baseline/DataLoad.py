@@ -91,9 +91,9 @@ class DataLoadDf(Dataset):
                     else:
                         label = label.split(",")
             else:
-                cols= ["onset", "offset", "event_label"]
-                label = self.df.iloc[index][cols]
-                if pd.isna(label["event_label"]):
+                cols = ["onset", "offset", "event_label"]
+                label = self.df[self.df.filename == self.filenames.iloc[index]][cols]
+                if label.empty:
                     label = []
         else:
             label = "empty"  # trick to have -1 for unlabeled data and concat them with labeled
@@ -479,14 +479,10 @@ class ConcatDataset(Dataset):
             count += size
         return cluster_ind
 
-    def __init__(self, datasets, batch_sizes=None):
+    def __init__(self, datasets):
         assert len(datasets) > 0, 'datasets should not be an empty iterable'
         self.datasets = list(datasets)
         self.cumulative_sizes = self.cumsum(self.datasets)
-        if batch_sizes is not None:
-            assert len(batch_sizes) == len(datasets), "If batch_sizes given, should be equal to the number " \
-                                                      "of datasets "
-        self.batch_sizes = batch_sizes
 
     def __len__(self):
         return self.cumulative_sizes[-1]

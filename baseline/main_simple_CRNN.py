@@ -41,22 +41,23 @@ def train(train_loader, model, optimizer, epoch):
         # Weak BCE Loss
         # Trick to not take unlabeled data
         # Todo figure out another way
-        target_weak = target.max(-2)[0]
-        weak_class_loss = class_criterion(weak_pred, target_weak)
+        # target_weak = target.max(-2)[0]
+        # weak_class_loss = class_criterion(weak_pred, target_weak)
         if i == 1:
             LOG.debug("target: {}".format(target.mean(-2)))
-            LOG.debug("Target_weak: {}".format(target_weak))
-            LOG.debug(weak_class_loss)
-        meters.update('weak_class_loss', weak_class_loss.item())
-
-        loss = weak_class_loss
+        #     LOG.debug("Target_weak: {}".format(target_weak))
+        #     LOG.debug(weak_class_loss)
+        # meters.update('weak_class_loss', weak_class_loss.item())
+        #
+        # loss = weak_class_loss
 
         # Strong BCE loss
-        strong_size = train_loader.batch_sampler.batch_sizes[-1]
-        strong_class_loss = class_criterion(strong_pred[-strong_size:], target[-strong_size:])
+        # strong_size = train_loader.batch_sampler.batch_sizes[-1]
+        # strong_class_loss = class_criterion(strong_pred[-strong_size:], target[-strong_size:])
+        strong_class_loss = class_criterion(strong_pred, target)
         meters.update('strong_class_loss', strong_class_loss.item())
 
-        loss += strong_class_loss
+        loss = strong_class_loss
 
         assert not (np.isnan(loss.item()) or loss.item() > 1e5), 'Loss explosion: {}'.format(loss.item())
         assert not loss.item() < 0, 'Loss problem, cannot be negative'
@@ -74,7 +75,7 @@ def train(train_loader, model, optimizer, epoch):
         'Time {meters[epoch_time]:.2f}\t'
         'LR {meters[lr]:.2E}\t'
         'Loss {meters[loss]:.4f}\t'
-        'Weak_loss {meters[weak_class_loss]:.4f}\t'
+        # 'Weak_loss {meters[weak_class_loss]:.4f}\t'
         'Strong_loss {meters[strong_class_loss]:.4f}\t'
         ''.format(
             epoch, meters=meters))
@@ -87,9 +88,10 @@ def get_predictions(model, valid_dataset, decoder, save_predictions=None):
         pred_strong, _ = model(input.unsqueeze(0))
         pred_strong = pred_strong.cpu()
         pred_strong = pred_strong.squeeze(0).detach().numpy()
+        LOG.debug(pred_strong)
         pred_strong = ProbabilityEncoder().binarization(pred_strong, binarization_type="global_threshold",
                                                         threshold=0.5)
-
+        LOG.debug(pred_strong.mean(-2))
         pred_strong = scipy.ndimage.filters.median_filter(pred_strong, (cfg.median_window, 1))
         pred = decoder(pred_strong)
         pred = pd.DataFrame(pred, columns=["event_label", "onset", "offset"])
@@ -196,7 +198,6 @@ if __name__ == '__main__':
     train_synth_data = DataLoadDf(train_synth_df_frames, dataset.get_feature_file, many_hot_encoder.encode_strong_df,
                                   transform=transforms)
     scaler = Scaler()
-    scaler = Scaler()
     scaler.calculate_scaler(ConcatDataset([train_weak_data, train_synth_data]))
     scaler.save(scaler_path)
     LOG.debug(scaler.mean_)
@@ -216,10 +217,12 @@ if __name__ == '__main__':
         crnn = CRNN(**crnn_kwargs)
         crnn.load(parameters=state["model"]["state_dict"])
     else:
-        crnn_kwargs = {"n_in_channel": 1, "nclass":len(classes), "attention":True, "n_RNN_cell":128,
+        crnn_kwargs = {"n_in_channel": 1, "nclass":len(classes), "attention":True, "n_RNN_cell":64,
+                       "n_layers_RNN": 2,
                        "activation": cfg.activation,
                        "dropout": cfg.dropout, "kernel_size": 7 * [3], "padding": 7 * [1], "stride": 7 * [1],
-                       "nb_filters": [16, 32, 64, 128, 128, 128], "pooling": list(3*((2,2),) + 4*((1,2),))}
+                       "nb_filters": [16, 32, 64],#, 128, 128, 128, 256],
+                       "pooling": list(3*((2,4),) + 3*((1,2),) + ((1,4),))}
         crnn = CRNN(**crnn_kwargs)
         crnn.apply(weights_init)
     LOG.info(crnn)
@@ -233,8 +236,8 @@ if __name__ == '__main__':
         # Taking as much data from synthetic than strong.
         sampler = MultiStreamBatchSampler(concat_dataset,
                                           batch_sizes=[cfg.batch_size // 2, cfg.batch_size // 2])
-        training_data = DataLoader(concat_dataset, batch_sampler=sampler)
-
+        # training_data = DataLoader(concat_dataset, batch_sampler=sampler)
+        training_data = DataLoader(train_synth_data, batch_size=4)
         valid_synth_data = DataLoadDf(valid_synth_df, dataset.get_feature_file, many_hot_encoder.encode_strong_df,
                                       transform=transforms_valid)
         valid_weak_data = DataLoadDf(valid_weak_df, dataset.get_feature_file, many_hot_encoder.encode_strong_df,
