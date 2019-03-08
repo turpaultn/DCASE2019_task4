@@ -13,7 +13,7 @@ from DatasetDcase2019Task4 import DatasetDcase2019Task4
 from DataLoad import DataLoadDf, ConcatDataset, ApplyLog, PadOrTrunc, ToTensor, Normalize, Compose, \
     MultiStreamBatchSampler, AugmentGaussianNoise
 from Scaler import Scaler
-from evaluation_measures import event_based_evaluation_df, get_f_measure_by_class
+from evaluation_measures import event_based_evaluation_df, get_f_measure_by_class, segment_based_evaluation_df
 from models.CRNN import CRNN
 import config as cfg
 from utils import ManyHotEncoder, AverageMeterSet, create_folder, SaveBest, to_cuda_if_available, weights_init
@@ -45,26 +45,26 @@ def update_ema_variables(model, ema_model, alpha, global_step):
 def train(train_loader, model, ema_model, optimizer, epoch, global_step):
     class_criterion = nn.BCELoss()
     consistency_criterion_strong = nn.MSELoss()
-    consistency_criterion_weak = nn.MSELoss()
-    [class_criterion, consistency_criterion_weak, consistency_criterion_strong] = to_cuda_if_available(
-        [class_criterion, consistency_criterion_weak, consistency_criterion_strong])
+    [class_criterion, consistency_criterion_strong] = to_cuda_if_available(
+        [class_criterion, consistency_criterion_strong])
 
     meters = AverageMeterSet()
 
     train_iter_count = cfg.n_epoch * len(train_loader)
     LOG.debug("Nb batches: {}".format(len(train_loader)))
     start = time.time()
+    rampup_length = len(train_loader) * cfg.n_epoch // 2
     for i, (batch_input, ema_batch_input, target) in enumerate(train_loader):
         e_step = epoch + i / len(train_loader)
-        if global_step < cfg.rampup_length:
-            rampup_value = ramps.sigmoid_rampup(e_step, cfg.rampup_length)
+        if e_step < rampup_length:
+            rampup_value = ramps.sigmoid_rampup(e_step, rampup_length)
         else:
             rampup_value = 1.0
 
-        if global_step > (train_iter_count - cfg.rampdown_length):
-            rampdown_value = ramps.sigmoid_rampdown(e_step, cfg.rampdown_length)
-        else:
-            rampdown_value = 1.0
+        # if global_step > (train_iter_count - cfg.rampdown_length):
+        #     rampdown_value = ramps.sigmoid_rampdown(e_step, cfg.rampdown_length)
+        # else:
+        #     rampdown_value = 1.0
 
         # adjust_learning_rate(optimizer, rampup_value, rampdown_value)
         meters.update('lr', optimizer.param_groups[0]['lr'])
@@ -86,14 +86,16 @@ def train(train_loader, model, ema_model, optimizer, epoch, global_step):
         # Trick to not take unlabeled data
         # Todo figure out another way
         weak_mask = target.max(-1)[0].max(-1)[0] != -1
+        weak_size = train_loader.batch_sampler.batch_sizes[0]
         target_weak = target.max(-2)[0]
-        weak_class_loss = class_criterion(weak_pred[weak_mask], target_weak[weak_mask])
-        if i == 1:
+        weak_class_loss = class_criterion(weak_pred[:weak_size], target_weak[:weak_size])
+        if i == 0:
             LOG.debug("target: {}".format(target.mean(-2)))
             LOG.debug("mask: {}".format(weak_mask))
             LOG.debug("Target_weak: {}".format(target_weak))
             LOG.debug("Target_weak mask: {}".format(target_weak[weak_mask]))
             LOG.debug(weak_class_loss)
+            LOG.debug("rampup_value: {}".format(rampup_value))
         meters.update('weak_class_loss', weak_class_loss.item())
 
         ema_class_loss = class_criterion(weak_pred_ema[weak_mask], target_weak[weak_mask])
@@ -111,17 +113,12 @@ def train(train_loader, model, ema_model, optimizer, epoch, global_step):
 
         loss += strong_class_loss
 
-        # Consistency losses
         consistency_cost = cfg.max_consistency_cost * rampup_value
-        if cfg.consistency_weak:
-            meters.update('cons_weight_weak', consistency_cost)
-            consistency_loss_weak = consistency_cost * consistency_criterion_weak(weak_pred, weak_pred_ema)
-            meters.update('weak_cons_loss', consistency_loss_weak.item())
-            loss += consistency_loss_weak
-
-        if cfg.consistency_strong:
+        if cfg.max_consistency_cost is not None:
             meters.update('cons_weight', consistency_cost)
-            consistency_loss_strong = consistency_cost * consistency_criterion_strong(strong_pred, strong_pred_ema)
+            # Take only the consistence with weak and unlabel
+            consistency_loss_strong = consistency_cost * consistency_criterion_strong(strong_pred[:strong_size],
+                                                                                      strong_pred_ema[:strong_size])
             meters.update('strong_cons_loss', consistency_loss_strong.item())
             loss += consistency_loss_strong
 
@@ -145,9 +142,9 @@ def train(train_loader, model, ema_model, optimizer, epoch, global_step):
         'Loss {meters[loss]:.4f}\t'
         'Weak_loss {meters[weak_class_loss]:.4f}\t'
         'Strong_loss {meters[strong_class_loss]:.4f}\t'
-        'Weak Cons {meters[weak_cons_loss]:.4f}\t'
         'Srtong Cons {meters[strong_cons_loss]:.4f}\t'
         'EMA loss {meters[weak_ema_class_loss]:.4f}\t'
+        'Cons weaight {meters[cons_weight]:.4f}\t'
         'Strong EMA loss {meters[strong_ema_class_loss]:.4f}\t'
         ''.format(
             epoch, meters=meters))
@@ -261,7 +258,7 @@ if __name__ == '__main__':
                                   transform=transforms)
 
     scaler = Scaler()
-    scaler.calculate_scaler(ConcatDataset([train_weak_data, train_synth_data]))
+    scaler.calculate_scaler(ConcatDataset([train_weak_data, unlabel_data, train_synth_data]))
     scaler.save(scaler_path)
 
     LOG.debug(scaler.mean_)
@@ -286,12 +283,12 @@ if __name__ == '__main__':
     # ##############
     # Model
     # ##############
-    crnn_kwargs = {"n_in_channel": 1, "nclass": len(classes), "attention": True, "n_RNN_cell": 128,
+    crnn_kwargs = {"n_in_channel": 1, "nclass": len(classes), "attention": True, "n_RNN_cell": 64,
                    "n_layers_RNN": 2,
                    "activation": cfg.activation,
-                   "dropout": cfg.dropout, "kernel_size": 7 * [3], "padding": 7 * [1], "stride": 7 * [1],
-                   "nb_filters": [16, 32, 64 , 128, 128, 128, 256],
-                   "pooling": list(3 * ((2, 4),) + 3 * ((1, 2),) + ((1, 4),))}
+                   "dropout": cfg.dropout, "kernel_size": 3 * [3], "padding": 3 * [1], "stride": 3 * [1],
+                   "nb_filters": [64, 64, 64],
+                   "pooling": list(3 * ((2, 4),))}
     crnn = CRNN(**crnn_kwargs)
     crnn_ema = CRNN(**crnn_kwargs)
 
@@ -327,6 +324,12 @@ if __name__ == '__main__':
     # Train
     # ##############
     global_step = 0
+
+    # Eval 2018
+    eval_2018_df = dataset.intialize_and_get_df(cfg.eval2018, reduced_number_of_data)
+    eval_2018 = DataLoadDf(eval_2018_df, dataset.get_feature_file, many_hot_encoder.encode_strong_df,
+                           transform=transforms_valid)
+
     for epoch in range(cfg.n_epoch):
         crnn = crnn.train()
         crnn_ema = crnn_ema.train()
@@ -340,14 +343,26 @@ if __name__ == '__main__':
                                       save_predictions=None)
         predictions.onset = predictions.onset * pooling_time_ratio / (cfg.sample_rate / cfg.hop_length)
         predictions.offset = predictions.offset * pooling_time_ratio / (cfg.sample_rate / cfg.hop_length)
-
         valid_metric = event_based_evaluation_df(valid_synth_df, predictions)
+
+
+        #Eval 2018
+        predictions = get_predictions(crnn, eval_2018, many_hot_encoder.decode_strong,
+                                      save_predictions=None)
+        predictions.onset = predictions.onset * pooling_time_ratio / (cfg.sample_rate / cfg.hop_length)
+        predictions.offset = predictions.offset * pooling_time_ratio / (cfg.sample_rate / cfg.hop_length)
+        eval2018_metric = event_based_evaluation_df(eval_2018_df, predictions)
+        eval2018_metric_seg = segment_based_evaluation_df(eval_2018_df, predictions)
+
         weak_metric = get_f_measure_by_class(crnn, len(classes),
                                              DataLoader(valid_weak_data, batch_size=cfg.batch_size))
 
         LOG.info("Weak F1-score per class: \n {}".format(pd.DataFrame(weak_metric * 100, many_hot_encoder.labels)))
         LOG.info("Weak F1-score macro averaged: {}".format(np.mean(weak_metric)))
         LOG.info(valid_metric)
+        LOG.info("Eval_metric:")
+        LOG.info(eval2018_metric)
+        LOG.info(eval2018_metric_seg)
 
         state['model']['state_dict'] = crnn.state_dict()
         state['model_ema']['state_dict'] = crnn_ema.state_dict()
@@ -375,6 +390,29 @@ if __name__ == '__main__':
     scaler = Scaler()
     scaler.load(scaler_path)
     transforms_valid = get_transforms(max_frames, scaler=scaler)
+    # Eval 2018
+    eval_2018_df = dataset.intialize_and_get_df(cfg.eval2018, reduced_number_of_data)
+    eval_2018 = DataLoadDf(eval_2018_df, dataset.get_feature_file, many_hot_encoder.encode_strong_df,
+                           transform=transforms_valid)
+    predictions = get_predictions(crnn, eval_2018, many_hot_encoder.decode_strong,
+                                  save_predictions=None)
+    predictions.onset = predictions.onset * pooling_time_ratio / (cfg.sample_rate / cfg.hop_length)
+    predictions.offset = predictions.offset * pooling_time_ratio / (cfg.sample_rate / cfg.hop_length)
+    eval2018_metric = event_based_evaluation_df(eval_2018_df, predictions)
+    eval2018_metric_seg = segment_based_evaluation_df(eval_2018_df, predictions)
+
+    eval_2018_df.onset = eval_2018_df.onset * (cfg.sample_rate / cfg.hop_length) // pooling_time_ratio
+    eval_2018_df.offset = eval_2018_df.offset * (cfg.sample_rate / cfg.hop_length) // pooling_time_ratio
+    validation_dataset = DataLoadDf(eval_2018_df, dataset.get_feature_file, many_hot_encoder.encode_strong_df,
+                                    transform=transforms_valid)
+    weak_metric = get_f_measure_by_class(crnn, len(classes), DataLoader(eval_2018, batch_size=cfg.batch_size))
+    LOG.info("2018: ")
+    LOG.info(eval2018_metric)
+    LOG.info(eval2018_metric_seg)
+    LOG.info("Weak F1-score per class: \n {}".format(pd.DataFrame(weak_metric * 100, many_hot_encoder.labels)))
+    LOG.info("Weak F1-score macro averaged: {}".format(np.mean(weak_metric)))
+
+    # Validation 2019
     validation_dataset = DataLoadDf(validation_df, dataset.get_feature_file, many_hot_encoder.encode_strong_df,
                                     transform=transforms_valid)
     predicitons_fname = os.path.join(saved_pred_dir, "baseline_validation.csv")
@@ -383,5 +421,16 @@ if __name__ == '__main__':
     predictions.onset = predictions.onset * pooling_time_ratio / (cfg.sample_rate / cfg.hop_length)
     predictions.offset = predictions.offset * pooling_time_ratio / (cfg.sample_rate / cfg.hop_length)
     metric = event_based_evaluation_df(validation_df, predictions)
+    metric_seg = segment_based_evaluation_df(validation_df, predictions)
+
+    validation_df.onset = validation_df.onset * (cfg.sample_rate / cfg.hop_length) // pooling_time_ratio
+    validation_df.offset = validation_df.offset * (cfg.sample_rate / cfg.hop_length) // pooling_time_ratio
+    validation_dataset = DataLoadDf(validation_df, dataset.get_feature_file, many_hot_encoder.encode_strong_df,
+                                    transform=transforms_valid)
+    weak_metric = get_f_measure_by_class(crnn, len(classes), DataLoader(validation_dataset, batch_size=cfg.batch_size))
+    LOG.info("Weak F1-score per class: \n {}".format(pd.DataFrame(weak_metric * 100, many_hot_encoder.labels)))
+    LOG.info("Weak F1-score macro averaged: {}".format(np.mean(weak_metric)))
     LOG.info("FINAL predictions")
     LOG.info(metric)
+    LOG.info(metric_seg)
+

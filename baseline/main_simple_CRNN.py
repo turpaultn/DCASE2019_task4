@@ -13,7 +13,7 @@ from DatasetDcase2019Task4 import DatasetDcase2019Task4
 from DataLoad import DataLoadDf, ConcatDataset, ApplyLog, PadOrTrunc, ToTensor, Normalize, Compose, \
     MultiStreamBatchSampler, AugmentGaussianNoise
 from Scaler import Scaler
-from evaluation_measures import event_based_evaluation_df, get_f_measure_by_class
+from evaluation_measures import event_based_evaluation_df, get_f_measure_by_class, segment_based_evaluation_df
 from models.CRNN import CRNN
 import config as cfg
 from utils import ManyHotEncoder, AverageMeterSet, create_folder, SaveBest, to_cuda_if_available, weights_init
@@ -42,7 +42,8 @@ def train(train_loader, model, optimizer, epoch):
         # Trick to not take unlabeled data
         # Todo figure out another way
         target_weak = target.max(-2)[0]
-        weak_class_loss = class_criterion(weak_pred, target_weak)
+        weak_size = train_loader.batch_sampler.batch_sizes[0]
+        weak_class_loss = class_criterion(weak_pred[:weak_size], target_weak[:weak_size])
         if i == 1:
             LOG.debug("target: {}".format(target.mean(-2)))
             LOG.debug("Target_weak: {}".format(target_weak))
@@ -54,7 +55,6 @@ def train(train_loader, model, optimizer, epoch):
         # Strong BCE loss
         strong_size = train_loader.batch_sampler.batch_sizes[-1]
         strong_class_loss = class_criterion(strong_pred[-strong_size:], target[-strong_size:])
-        strong_class_loss = class_criterion(strong_pred, target)
         meters.update('strong_class_loss', strong_class_loss.item())
 
         loss += strong_class_loss
@@ -75,7 +75,7 @@ def train(train_loader, model, optimizer, epoch):
         'Time {meters[epoch_time]:.2f}\t'
         'LR {meters[lr]:.2E}\t'
         'Loss {meters[loss]:.4f}\t'
-        # 'Weak_loss {meters[weak_class_loss]:.4f}\t'
+        'Weak_loss {meters[weak_class_loss]:.4f}\t'
         'Strong_loss {meters[strong_class_loss]:.4f}\t'
         ''.format(
             epoch, meters=meters))
@@ -218,12 +218,12 @@ if __name__ == '__main__':
         crnn = CRNN(**crnn_kwargs)
         crnn.load(parameters=state["model"]["state_dict"])
     else:
-        crnn_kwargs = {"n_in_channel": 1, "nclass":len(classes), "attention":True, "n_RNN_cell":64,
+        crnn_kwargs = {"n_in_channel": 1, "nclass": len(classes), "attention": True, "n_RNN_cell": 64,
                        "n_layers_RNN": 2,
                        "activation": cfg.activation,
-                       "dropout": cfg.dropout, "kernel_size": 7 * [3], "padding": 7 * [1], "stride": 7 * [1],
-                       "nb_filters": [16, 32, 64],#, 128, 128, 128, 256],
-                       "pooling": list(3*((2,4),) + 3*((1,2),) + ((1,4),))}
+                       "dropout": cfg.dropout, "kernel_size": 3 * [3], "padding": 3 * [1], "stride": 3 * [1],
+                       "nb_filters": [64, 64, 64],
+                       "pooling": list(3 * ((2, 4),))}
         crnn = CRNN(**crnn_kwargs)
         crnn.apply(weights_init)
     LOG.info(crnn)
@@ -272,6 +272,11 @@ if __name__ == '__main__':
         # ##############
         # Train
         # ##############
+        # Eval 2018
+        eval_2018_df = dataset.intialize_and_get_df(cfg.eval2018, reduced_number_of_data)
+        eval_2018 = DataLoadDf(eval_2018_df, dataset.get_feature_file, many_hot_encoder.encode_strong_df,
+                               transform=transforms_valid)
+
         [crnn] = to_cuda_if_available([crnn])
         for epoch in range(starting_epoch, cfg.n_epoch):
             crnn = crnn.train()
@@ -296,12 +301,22 @@ if __name__ == '__main__':
             predictions.onset = predictions.onset * pooling_time_ratio / (cfg.sample_rate / cfg.hop_length)
             predictions.offset = predictions.offset * pooling_time_ratio / (cfg.sample_rate / cfg.hop_length)
             valid_metric = event_based_evaluation_df(valid_synth_df, predictions)
+
+            # Eval 2018
+            predictions = get_predictions(crnn, eval_2018, many_hot_encoder.decode_strong,
+                                          save_predictions=None)
+            predictions.onset = predictions.onset * pooling_time_ratio / (cfg.sample_rate / cfg.hop_length)
+            predictions.offset = predictions.offset * pooling_time_ratio / (cfg.sample_rate / cfg.hop_length)
+            eval2018_metric = event_based_evaluation_df(eval_2018_df, predictions)
+
             weak_metric = get_f_measure_by_class(crnn, len(classes),
                                                  DataLoader(valid_weak_data, batch_size=cfg.batch_size))
 
             LOG.info("Weak F1-score per class: \n {}".format(pd.DataFrame(weak_metric * 100, many_hot_encoder.labels)))
             LOG.info("Weak F1-score macro averaged: {}".format(np.mean(weak_metric)))
             LOG.info(valid_metric)
+            LOG.info("Eval_metric:")
+            LOG.info(eval2018_metric)
 
             state['model']['state_dict'] = crnn.state_dict()
             state['optimizer']['state_dict'] = optimizer.state_dict()
@@ -328,6 +343,29 @@ if __name__ == '__main__':
     scaler = Scaler()
     scaler.load(scaler_path)
     transforms_valid = get_transforms(max_frames, scaler=scaler)
+    # Eval 2018
+    eval_2018_df = dataset.intialize_and_get_df(cfg.eval2018, reduced_number_of_data)
+    eval_2018 = DataLoadDf(eval_2018_df, dataset.get_feature_file, many_hot_encoder.encode_strong_df,
+                           transform=transforms_valid)
+    predictions = get_predictions(crnn, eval_2018, many_hot_encoder.decode_strong,
+                                  save_predictions=None)
+    predictions.onset = predictions.onset * pooling_time_ratio / (cfg.sample_rate / cfg.hop_length)
+    predictions.offset = predictions.offset * pooling_time_ratio / (cfg.sample_rate / cfg.hop_length)
+    eval2018_metric = event_based_evaluation_df(eval_2018_df, predictions)
+    eval2018_metric_seg = segment_based_evaluation_df(eval_2018_df, predictions)
+
+    eval_2018_df.onset = eval_2018_df.onset * (cfg.sample_rate / cfg.hop_length) // pooling_time_ratio
+    eval_2018_df.offset = eval_2018_df.offset * (cfg.sample_rate / cfg.hop_length) // pooling_time_ratio
+    validation_dataset = DataLoadDf(eval_2018_df, dataset.get_feature_file, many_hot_encoder.encode_strong_df,
+                                    transform=transforms_valid)
+    weak_metric = get_f_measure_by_class(crnn, len(classes), DataLoader(eval_2018, batch_size=cfg.batch_size))
+    LOG.info("2018: ")
+    LOG.info(eval2018_metric)
+    LOG.info(eval2018_metric_seg)
+    LOG.info("Weak F1-score per class: \n {}".format(pd.DataFrame(weak_metric * 100, many_hot_encoder.labels)))
+    LOG.info("Weak F1-score macro averaged: {}".format(np.mean(weak_metric)))
+
+    # Validation 2019
     validation_dataset = DataLoadDf(validation_df, dataset.get_feature_file, many_hot_encoder.encode_strong_df,
                                     transform=transforms_valid)
     predicitons_fname = os.path.join(saved_pred_dir, "baseline_validation.csv")
@@ -336,6 +374,17 @@ if __name__ == '__main__':
     predictions.onset = predictions.onset * pooling_time_ratio / (cfg.sample_rate / cfg.hop_length)
     predictions.offset = predictions.offset * pooling_time_ratio / (cfg.sample_rate / cfg.hop_length)
     metric = event_based_evaluation_df(validation_df, predictions)
+    metric_seg = segment_based_evaluation_df(validation_df, predictions)
+
+    validation_df.onset = validation_df.onset * (cfg.sample_rate / cfg.hop_length) // pooling_time_ratio
+    validation_df.offset = validation_df.offset * (cfg.sample_rate / cfg.hop_length) // pooling_time_ratio
+    validation_dataset = DataLoadDf(validation_df, dataset.get_feature_file, many_hot_encoder.encode_strong_df,
+                                    transform=transforms_valid)
+    weak_metric = get_f_measure_by_class(crnn, len(classes),
+                                         DataLoader(validation_dataset, batch_size=cfg.batch_size))
+    LOG.info("Weak F1-score per class: \n {}".format(pd.DataFrame(weak_metric * 100, many_hot_encoder.labels)))
+    LOG.info("Weak F1-score macro averaged: {}".format(np.mean(weak_metric)))
     LOG.info("FINAL predictions")
     LOG.info(metric)
+    LOG.info(metric_seg)
 

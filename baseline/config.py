@@ -40,12 +40,8 @@ train_iter_count = 20000
 rampup_length = 0 # int(0.5 * train_iter_count)
 rampdown_length = 0 # int(0.1 * train_iter_count)
 
-max_consistency_cost = 100.
+max_consistency_cost = 10
 max_learning_rate = 0.001
-consistency_weak = 10
-consistency_strong = 10
-consistency_rampup = 10
-
 
 
 
