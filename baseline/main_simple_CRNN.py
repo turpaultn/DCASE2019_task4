@@ -293,6 +293,8 @@ if __name__ == '__main__':
 
             predictions = get_predictions(crnn, valid_synth_data, many_hot_encoder.decode_strong,
                                           save_predictions=None)
+            predictions.onset = predictions.onset * pooling_time_ratio / (cfg.sample_rate / cfg.hop_length)
+            predictions.offset = predictions.offset * pooling_time_ratio / (cfg.sample_rate / cfg.hop_length)
             valid_metric = event_based_evaluation_df(valid_synth_df, predictions)
             weak_metric = get_f_measure_by_class(crnn, len(classes),
                                                  DataLoader(valid_weak_data, batch_size=cfg.batch_size))
