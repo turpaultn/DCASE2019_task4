@@ -82,13 +82,12 @@ def train(train_loader, model, optimizer, epoch, weak_mask=None, strong_mask=Non
 
 
 if __name__ == '__main__':
+    LOG.info("Simple CRNNs")
     parser = argparse.ArgumentParser(description="")
     parser.add_argument("-s", '--subpart_data', type=int, default=None, dest="subpart_data",
                         help="Number of files to be used. Useful when testing on small number of files.")
     parser.add_argument("-n", '--no_weak', dest='no_weak', action='store_true', default=False,
                         help="Not using weak labels during training")
-    # parser.add_argument("-u", '--use_weak', type=bool, default=True, dest="use_weak",
-    #                     help="Number of files to be used. Useful when testing on small number of files.")
     parser.add_argument("-m", '--model_path', type=str, default=None, dest="model_path",
                         help="Path of the model to be resume or to get validation results from.")
     parser.add_argument("-r", '--resume', type=bool, default=False, dest="resume",

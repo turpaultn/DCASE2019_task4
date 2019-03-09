@@ -70,7 +70,7 @@ def train(train_loader, model, optimizer, epoch, ema_model=None, weak_mask=None,
     start = time.time()
     rampup_length = len(train_loader) * cfg.n_epoch // 2
     for i, (batch_input, ema_batch_input, target) in enumerate(train_loader):
-        global_step = epoch + i
+        global_step = epoch * len(train_loader) + i
         if global_step < rampup_length:
             rampup_value = ramps.sigmoid_rampup(global_step, rampup_length)
         else:
@@ -97,12 +97,12 @@ def train(train_loader, model, optimizer, epoch, ema_model=None, weak_mask=None,
             if i == 0:
                 LOG.debug("target: {}".format(target.mean(-2)))
                 LOG.debug("Target_weak: {}".format(target_weak))
-                LOG.debug("Target_weak mask: {}".format(target_weak[strong_mask]))
+                LOG.debug("Target_weak mask: {}".format(target_weak[weak_mask]))
                 LOG.debug(weak_class_loss)
                 LOG.debug("rampup_value: {}".format(rampup_value))
             meters.update('weak_class_loss', weak_class_loss.item())
 
-            ema_class_loss = class_criterion(weak_pred_ema[strong_mask], target_weak[strong_mask])
+            ema_class_loss = class_criterion(weak_pred_ema[weak_mask], target_weak[weak_mask])
             meters.update('Weak EMA loss', ema_class_loss.item())
 
             loss = weak_class_loss
@@ -156,6 +156,7 @@ def train(train_loader, model, optimizer, epoch, ema_model=None, weak_mask=None,
 
 
 if __name__ == '__main__':
+    LOG.info("MEAN TEACHER")
     parser = argparse.ArgumentParser(description="")
     parser.add_argument("-s", '--subpart_data', type=int, default=None, dest="subpart_data",
                         help="Number of files to be used. Useful when testing on small number of files.")
@@ -167,7 +168,7 @@ if __name__ == '__main__':
     reduced_number_of_data = f_args.subpart_data
     no_synthetic = f_args.no_synthetic
     LOG.info("subpart_data = {}".format(reduced_number_of_data))
-    LOG.info("no_synthetic = {}".format(no_synthetic))
+    LOG.info("Using synthetic data = {}".format(not no_synthetic))
 
     if no_synthetic:
         add_dir_model_name = "_no_synthetic"
