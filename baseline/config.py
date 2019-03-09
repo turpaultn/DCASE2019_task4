@@ -15,7 +15,7 @@ eval2018 = 'dataset/metadata/validation/eval_dcase2018.csv'
 # prepare_data
 sample_rate = 44100
 n_window = 2048
-hop_length = 512
+hop_length = 511
 n_mels = 64
 max_len_seconds = 10.
 max_frames = math.ceil(max_len_seconds * sample_rate / hop_length)

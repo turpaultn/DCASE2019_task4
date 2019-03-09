@@ -20,19 +20,10 @@ def get_f_measure_by_class(torch_model, nb_tags, dataloader_, thresholds_=None):
     """ get f measure for each class given a model and a generator of data (batch_x, y)
 
     Args:
-        torch_model : Model, model to get predictions
-
+        torch_model : Model, model to get predictions, forward should return weak and strong predictions
         nb_tags : int, number of classes which are represented
-
         dataloader_ : generator, data generator used to get f_measure
-
         thresholds_ : int or list, thresholds to apply to each class to binarize probabilities
-
-        scaler_: scaler if normalisation not in dataloader
-
-        max_frames: if using frames
-
-        embedding_: model of the embedding
 
     Returns:
         macro_f_measure : list, f measure for each class

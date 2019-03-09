@@ -49,6 +49,16 @@ def update_ema_variables(model, ema_model, alpha, global_step):
 
 
 def train(train_loader, model, optimizer, epoch, ema_model=None, weak_mask=None, strong_mask=None):
+    """ One epoch of a Mean Teacher model
+    :param train_loader: torch.utils.data.DataLoader, iterator of training batches for an epoch.
+    Should return 3 values: teacher input, student input, labels
+    :param model: torch.Module, model to be trained, should return a weak and strong prediction
+    :param optimizer: torch.Module, optimizer used to train the model
+    :param epoch: int, the current epoch of training
+    :param ema_model: torch.Module, student model, should return a weak and strong prediction
+    :param weak_mask: mask the batch to get only the weak labeled data (used to calculate the loss)
+    :param strong_mask: mask the batch to get only the strong labeled data (used to calcultate the loss)
+    """
     class_criterion = nn.BCELoss()
     consistency_criterion_strong = nn.MSELoss()
     [class_criterion, consistency_criterion_strong] = to_cuda_if_available(
