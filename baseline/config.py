@@ -2,7 +2,7 @@ import math
 import os
 import pandas as pd
 
-workspace = ""
+workspace = ".."
 # Dataset Paths
 weak = 'dataset/metadata/train/weak.csv'
 unlabel = 'dataset/metadata/train/unlabel_in_domain.csv'
