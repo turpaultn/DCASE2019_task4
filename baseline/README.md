@@ -17,26 +17,18 @@ The system is trained for 100 epochs.
 
 
 
-Inputs are 500 frames long, each of them labeled identically following clip labels.
-The model outputs a decision for each frame. 
+Inputs are 864 frames long. The CRNN model is pooling in time to have 108 frames.
 Postrocessing (median filtering) of 5 frames is used to obtain events onset and offset for each file.
 The baseline system includes evaluations of results using **event-based F-score** as metric. 
 
 #### Script description
-The baseline is a mean-teacher model
+The baseline using a mean-teacher model:
+It is composed of two networks, both the same CRNN.
+- The teacher model is trained regularly. (with synthetic or weak labels depending the data)
+- The student model is not trained, its weights are a moving average of the teacher model (at each epoch).
+- Inputs of the student model = inputs + gaussian noise
+- A cost for consistency between teacher and student model is applied. (for weak and strong predictions)
 
-The baseline system is a semi supervised approach:
- - Download the data (only the first time)
- - First pass at clip level:
-    - Train a CRNN on weak data (`train/weak`) - *20% of data used for validation*
-    - Predict unlabel (in domain) data (`train/unlabel_in_domain`)
- - Second pass at frame level:
-    - Train a CRNN on predicted unlabel data from the first pass (`train/unlabel_in_domain`) - *weak data (`train/weak`)
-    is used for validation*
-    *Note: labels are used at frames level but annotations are at clip level, so if an event is present in the 10 sec, 
-    all frames contain this label during training*
-    - Predict strong test labels (`test/`) *Note: predict an event with an onset and offset*
- - Evaluate the model between test annotations and second pass predictions (Metric is (macro-average) [event based](http://tut-arg.github.io/sed_eval/sound_event.html#event-based))
 
 System performance (event-based measures with a 200ms collar on onsets and a 200ms / 20% of the events length collar on offsets):
  <table class="table table-striped">

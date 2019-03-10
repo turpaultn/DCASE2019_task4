@@ -88,7 +88,7 @@ if __name__ == '__main__':
                         help="Number of files to be used. Useful when testing on small number of files.")
     parser.add_argument("-m", '--model_path', type=str, default=None, dest="model_path",
                         help="Path of the model to be resume or to get validation results from.")
-    parser.add_argument("s", '--save_predictions_fname', type=str, default=None, dest="save_predictions_fname",
+    parser.add_argument("-p", '--save_predictions_fname', type=str, default=None, dest="save_predictions_fname",
                         help="Path for the predictions to be saved, if not set, not save them")
 
     f_args = parser.parse_args()
