@@ -96,4 +96,4 @@ if __name__ == '__main__':
     model_path = f_args.model_path
     expe_state = torch.load(model_path, map_location="cpu")
 
-    test_model(model_path, reduced_number_of_data, "predictions.csv")
+    test_model(expe_state, reduced_number_of_data, "predictions.csv")
