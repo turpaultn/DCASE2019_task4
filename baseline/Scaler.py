@@ -104,12 +104,16 @@ class Scaler(object):
         else:
             return (batch - self.mean_) / self.std_
 
-    def save(self, path):
+    def state_dict(self):
         if type(self.mean_) is not np.ndarray:
             raise NotImplementedError("Save scaler only implemented for numpy array means_")
 
         dict_save = {"mean_": self.mean_.tolist(),
                      "mean_of_square_": self.mean_of_square_.tolist()}
+        return dict_save
+
+    def save(self, path):
+        dict_save = self.state_dict()
         with open(path, "w") as f:
             json.dump(dict_save, f)
 
@@ -117,7 +121,10 @@ class Scaler(object):
         with open(path, "r") as f:
             dict_save = json.load(f)
 
-        self.mean_ = np.array(dict_save["mean_"])
-        self.mean_of_square_ = np.array(dict_save["mean_of_square_"])
+        self.load_state_dict(dict_save)
+
+    def load_state_dict(self, state_dict):
+        self.mean_ = np.array(state_dict["mean_"])
+        self.mean_of_square_ = np.array(state_dict["mean_of_square_"])
         variance = self.variance(self.mean_, self.mean_of_square_)
         self.std_ = self.std(variance)

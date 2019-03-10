@@ -39,7 +39,7 @@ median_window = 5
 
 # Main
 num_workers = 12
-batch_size = 32
+batch_size = 24
 n_epoch = 100
 
 checkpoint_epochs = 1

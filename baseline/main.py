@@ -19,6 +19,7 @@ import ramps
 from DatasetDcase2019Task4 import DatasetDcase2019Task4
 from DataLoad import DataLoadDf, ConcatDataset, MultiStreamBatchSampler
 from Scaler import Scaler
+from TestModel import test_model
 from evaluation_measures import get_f_measure_by_class, get_predictions, audio_tagging_results, compute_strong_metrics
 from models.CRNN import CRNN
 import config as cfg
@@ -89,11 +90,13 @@ def train(train_loader, model, optimizer, epoch, ema_model=None, weak_mask=None,
 
         strong_pred, weak_pred = model(batch_input)
         loss = None
+        # Weak BCE Loss
+        # Take the max in the time axis
+        target_weak = target.max(-2)[0]
         if weak_mask is not None:
-            # Weak BCE Loss
-            # Take the max in the time axis
-            target_weak = target.max(-2)[0]
             weak_class_loss = class_criterion(weak_pred[weak_mask], target_weak[weak_mask])
+            ema_class_loss = class_criterion(weak_pred_ema[weak_mask], target_weak[weak_mask])
+
             if i == 0:
                 LOG.debug("target: {}".format(target.mean(-2)))
                 LOG.debug("Target_weak: {}".format(target_weak))
@@ -102,13 +105,12 @@ def train(train_loader, model, optimizer, epoch, ema_model=None, weak_mask=None,
                 LOG.debug("rampup_value: {}".format(rampup_value))
             meters.update('weak_class_loss', weak_class_loss.item())
 
-            ema_class_loss = class_criterion(weak_pred_ema[weak_mask], target_weak[weak_mask])
             meters.update('Weak EMA loss', ema_class_loss.item())
 
             loss = weak_class_loss
 
         # Strong BCE loss
-        if strong_mask:
+        if strong_mask is not None:
             strong_class_loss = class_criterion(strong_pred[strong_mask], target[strong_mask])
             meters.update('Strong loss', strong_class_loss.item())
 
@@ -123,16 +125,25 @@ def train(train_loader, model, optimizer, epoch, ema_model=None, weak_mask=None,
         if ema_model is not None:
 
             consistency_cost = cfg.max_consistency_cost * rampup_value
-            if cfg.max_consistency_cost is not None:
-                meters.update('Consistency weight', consistency_cost)
-                # Take only the consistence with weak and unlabel
-                consistency_loss_strong = consistency_cost * consistency_criterion_strong(strong_pred[strong_mask],
-                                                                                          strong_pred_ema[strong_mask])
-                meters.update('Consistency loss', consistency_loss_strong.item())
-                if loss is not None:
-                    loss += consistency_loss_strong
-                else:
-                    loss = consistency_loss_strong
+            meters.update('Consistency weight', consistency_cost)
+            # Take only the consistence with weak and unlabel
+            consistency_loss_strong = consistency_cost * consistency_criterion_strong(strong_pred,
+                                                                                      strong_pred_ema)
+            meters.update('Consistency loss', consistency_loss_strong.item())
+            if loss is not None:
+                loss += consistency_loss_strong
+            else:
+                loss = consistency_loss_strong
+
+            meters.update('Consistency weight', consistency_cost)
+            # Take only the consistence with weak and unlabel
+            consistency_weak_strong = consistency_cost * consistency_criterion_strong(weak_pred,
+                                                                                      weak_pred_ema)
+            meters.update('Consistency loss', consistency_weak_strong.item())
+            if loss is not None:
+                loss += consistency_weak_strong
+            else:
+                loss = consistency_weak_strong
 
         assert not (np.isnan(loss.item()) or loss.item() > 1e5), 'Loss explosion: {}'.format(loss.item())
         assert not loss.item() < 0, 'Loss problem, cannot be negative'
@@ -350,43 +361,11 @@ if __name__ == '__main__':
                 torch.save(state, model_fname)
 
     if cfg.save_best:
-        state = torch.load(os.path.join(saved_model_dir, "baseline_best"))
-        crnn.load(parameters=state["model"]["state_dict"])
+        model_fname = os.path.join(saved_model_dir, "baseline_best")
 
     # ##############
     # Validation
     # ##############
-    crnn = crnn.eval()
-    scaler = Scaler()
-    scaler.load(scaler_path)
-    transforms_valid = get_transforms(cfg.max_frames, scaler=scaler)
-
-    # Eval 2018
-    eval_2018_df = dataset.intialize_and_get_df(cfg.eval2018, reduced_number_of_data)
-    # Strong
-    eval_2018_strong = DataLoadDf(eval_2018_df, dataset.get_feature_file, many_hot_encoder.encode_strong_df,
-                           transform=transforms_valid)
-    predictions = get_predictions(crnn, eval_2018_strong, many_hot_encoder.decode_strong, save_predictions=None)
-    compute_strong_metrics(predictions, eval_2018_df, pooling_time_ratio)
-    # Weak
-    eval_2018_weak = DataLoadDf(eval_2018_df, dataset.get_feature_file, many_hot_encoder.encode_weak,
-                                transform=transforms_valid)
-    weak_metric = get_f_measure_by_class(crnn, len(classes), DataLoader(eval_2018_weak, batch_size=cfg.batch_size))
-    LOG.info("Weak F1-score per class: \n {}".format(pd.DataFrame(weak_metric * 100, many_hot_encoder.labels)))
-    LOG.info("Weak F1-score macro averaged: {}".format(np.mean(weak_metric)))
-
-    # Validation 2019
-    validation_strong = DataLoadDf(validation_df, dataset.get_feature_file, many_hot_encoder.encode_strong_df,
-                                   transform=transforms_valid)
+    LOG.info("testing model: {}".format(model_fname))
     predicitons_fname = os.path.join(saved_pred_dir, "baseline_validation.csv")
-    predictions = get_predictions(crnn, validation_strong, many_hot_encoder.decode_strong,
-                                  save_predictions=predicitons_fname)
-    compute_strong_metrics(predictions, validation_df, pooling_time_ratio)
-
-    validation_weak = DataLoadDf(validation_df, dataset.get_feature_file, many_hot_encoder.encode_weak,
-                                 transform=transforms_valid)
-    weak_metric = get_f_measure_by_class(crnn, len(classes), DataLoader(validation_weak, batch_size=cfg.batch_size))
-    LOG.info("Weak F1-score per class: \n {}".format(pd.DataFrame(weak_metric * 100, many_hot_encoder.labels)))
-    LOG.info("Weak F1-score macro averaged: {}".format(np.mean(weak_metric)))
-
-    print(audio_tagging_results(validation_df, predictions))
+    test_model(model_fname, reduced_number_of_data, predicitons_fname)
