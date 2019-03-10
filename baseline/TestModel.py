@@ -94,5 +94,6 @@ if __name__ == '__main__':
     f_args = parser.parse_args()
     reduced_number_of_data = f_args.subpart_data
     model_path = f_args.model_path
+    expe_state = torch.load(model_path, map_location="cpu")
 
     test_model(model_path, reduced_number_of_data, "predictions.csv")
