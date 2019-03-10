@@ -14,18 +14,18 @@ import numpy as np
 
 import torch
 from torch.utils.data import DataLoader
+from torch import nn
 
 from DatasetDcase2019Task4 import DatasetDcase2019Task4
 from DataLoad import DataLoadDf, ConcatDataset, MultiStreamBatchSampler
-from Scaler import Scaler
+from utils.Scaler import Scaler
 from TestModel import test_model
 from evaluation_measures import get_f_measure_by_class, get_predictions, audio_tagging_results, compute_strong_metrics
 from models.CRNN import CRNN
 import config as cfg
-from utils import ManyHotEncoder, AverageMeterSet, create_folder, SaveBest, to_cuda_if_available, weights_init, \
+from utils.utils import ManyHotEncoder, AverageMeterSet, create_folder, SaveBest, to_cuda_if_available, weights_init, \
     get_transforms
-from torch import nn
-from Logger import LOG
+from utils.Logger import LOG
 
 
 def train(train_loader, model, optimizer, epoch, weak_mask=None, strong_mask=None):
@@ -281,10 +281,13 @@ if __name__ == '__main__':
 
     if cfg.save_best:
         model_fname = os.path.join(saved_model_dir, "baseline_best")
+        state = torch.load(model_fname)
+        LOG.info("testing model: {}".format(model_fname))
+    else:
+        LOG.info("testing model of last epoch: {}".format(cfg.n_epoch))
 
     # ##############
     # Validation
     # ##############
-    LOG.info("testing model: {}".format(model_fname))
     predicitons_fname = os.path.join(saved_pred_dir, "baseline_validation.csv")
-    test_model(model_fname, reduced_number_of_data, predicitons_fname)
+    test_model(state, reduced_number_of_data, predicitons_fname)

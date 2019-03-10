@@ -1,3 +1,9 @@
+# -*- coding: utf-8 -*-
+#########################################################################
+# Initial software
+# Copyright Nicolas Turpault, Romain Serizel, Justin Salamon, Ankit Parag Shah, 2019, v1.0
+# This software is distributed under the terms of the License MIT
+#########################################################################
 import argparse
 import os
 import torch
@@ -9,19 +15,18 @@ import numpy as np
 from DataLoad import DataLoadDf
 from DatasetDcase2019Task4 import DatasetDcase2019Task4
 from evaluation_measures import audio_tagging_results, get_f_measure_by_class, compute_strong_metrics, get_predictions
-from utils import ManyHotEncoder, to_cuda_if_available, get_transforms
-from Logger import LOG
-from Scaler import Scaler
+from utils.utils import ManyHotEncoder, to_cuda_if_available, get_transforms
+from utils.Logger import LOG
+from utils.Scaler import Scaler
 from models.CRNN import CRNN
 import config as cfg
 
 
-def test_model(model_path, reduced_number_of_data, strore_predicitions_fname=None):
+def test_model(state, reduced_number_of_data, strore_predicitions_fname=None):
     dataset = DatasetDcase2019Task4(os.path.join(cfg.workspace),
                                     base_feature_dir=os.path.join(cfg.workspace, "dataset", "features"),
                                     save_log_feature=False)
 
-    state = torch.load(model_path)
     crnn_kwargs = state["model"]["kwargs"]
     crnn = CRNN(**crnn_kwargs)
     crnn.load(parameters=state["model"]["state_dict"])

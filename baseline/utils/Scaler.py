@@ -3,7 +3,7 @@ import logging
 import numpy as np
 import torch
 import json
-from Logger import LOG
+from utils.Logger import LOG
 
 
 class Scaler(object):

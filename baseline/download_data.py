@@ -19,7 +19,7 @@ from contextlib import closing
 from multiprocessing import Pool
 import functools
 import shutil
-from Logger import LOG
+from utils.Logger import LOG
 
 TMP_FOLDER = "tmp/"
 

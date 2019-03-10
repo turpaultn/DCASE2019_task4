@@ -14,19 +14,19 @@ import numpy as np
 
 import torch
 from torch.utils.data import DataLoader
+from torch import nn
 
-import ramps
+from utils import ramps
 from DatasetDcase2019Task4 import DatasetDcase2019Task4
 from DataLoad import DataLoadDf, ConcatDataset, MultiStreamBatchSampler
-from Scaler import Scaler
+from utils.Scaler import Scaler
 from TestModel import test_model
 from evaluation_measures import get_f_measure_by_class, get_predictions, audio_tagging_results, compute_strong_metrics
 from models.CRNN import CRNN
 import config as cfg
-from utils import ManyHotEncoder, create_folder, SaveBest, to_cuda_if_available, weights_init, \
+from utils.utils import ManyHotEncoder, create_folder, SaveBest, to_cuda_if_available, weights_init, \
     get_transforms, AverageMeterSet
-from torch import nn
-from Logger import LOG
+from utils.Logger import LOG
 
 
 def adjust_learning_rate(optimizer, rampup_value, rampdown_value):
@@ -188,7 +188,6 @@ if __name__ == '__main__':
     store_dir = os.path.join("stored_data", "MeanTeacher" + add_dir_model_name)
     saved_model_dir = os.path.join(store_dir, "model")
     saved_pred_dir = os.path.join(store_dir, "predictions")
-    scaler_path = os.path.join(store_dir, "scaler")
     create_folder(store_dir)
     create_folder(saved_model_dir)
     create_folder(saved_pred_dir)
@@ -249,7 +248,6 @@ if __name__ == '__main__':
 
     scaler = Scaler()
     scaler.calculate_scaler(ConcatDataset(list_dataset))
-    scaler.save(scaler_path)
 
     LOG.debug(scaler.mean_)
 
@@ -305,7 +303,8 @@ if __name__ == '__main__':
                       'args': '',
                       "kwargs": optim_kwargs,
                       'state_dict': optimizer.state_dict()},
-        "pooling_time_ratio": pooling_time_ratio
+        "pooling_time_ratio": pooling_time_ratio,
+        "scaler": scaler.state_dict()
     }
 
     save_best_cb = SaveBest("sup")
@@ -361,10 +360,13 @@ if __name__ == '__main__':
 
     if cfg.save_best:
         model_fname = os.path.join(saved_model_dir, "baseline_best")
+        state = torch.load(model_fname)
+        LOG.info("testing model: {}".format(model_fname))
+    else:
+        LOG.info("testing model of last epoch: {}".format(cfg.n_epoch))
 
     # ##############
     # Validation
     # ##############
-    LOG.info("testing model: {}".format(model_fname))
     predicitons_fname = os.path.join(saved_pred_dir, "baseline_validation.csv")
-    test_model(model_fname, reduced_number_of_data, predicitons_fname)
+    test_model(state, reduced_number_of_data, predicitons_fname)

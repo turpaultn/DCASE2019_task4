@@ -13,9 +13,9 @@ import time
 import pandas as pd
 
 import config as cfg
-from Logger import LOG
+from utils.Logger import LOG
 from download_data import download
-from utils import create_folder, read_audio
+from utils.utils import create_folder, read_audio
 
 
 class DatasetDcase2019Task4:

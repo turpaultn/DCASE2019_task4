@@ -12,8 +12,8 @@ import pandas as pd
 import torch
 
 import config as cfg
-from Logger import LOG
-from utils import ManyHotEncoder, to_cuda_if_available
+from utils.Logger import LOG
+from utils.utils import ManyHotEncoder, to_cuda_if_available
 
 
 def get_f_measure_by_class(torch_model, nb_tags, dataloader_, thresholds_=None):
