@@ -129,7 +129,7 @@ def train(train_loader, model, optimizer, epoch, ema_model=None, weak_mask=None,
             # Take only the consistence with weak and unlabel
             consistency_loss_strong = consistency_cost * consistency_criterion_strong(strong_pred,
                                                                                       strong_pred_ema)
-            meters.update('Consistency loss', consistency_loss_strong.item())
+            meters.update('Consistency strong', consistency_loss_strong.item())
             if loss is not None:
                 loss += consistency_loss_strong
             else:
@@ -137,13 +137,12 @@ def train(train_loader, model, optimizer, epoch, ema_model=None, weak_mask=None,
 
             meters.update('Consistency weight', consistency_cost)
             # Take only the consistence with weak and unlabel
-            consistency_weak_strong = consistency_cost * consistency_criterion_strong(weak_pred,
-                                                                                      weak_pred_ema)
-            meters.update('Consistency loss', consistency_weak_strong.item())
+            consistency_loss_weak = consistency_cost * consistency_criterion_strong(weak_pred, weak_pred_ema)
+            meters.update('Consistency weak', consistency_loss_weak.item())
             if loss is not None:
-                loss += consistency_weak_strong
+                loss += consistency_loss_weak
             else:
-                loss = consistency_weak_strong
+                loss = consistency_loss_weak
 
         assert not (np.isnan(loss.item()) or loss.item() > 1e5), 'Loss explosion: {}'.format(loss.item())
         assert not loss.item() < 0, 'Loss problem, cannot be negative'
@@ -202,11 +201,11 @@ if __name__ == '__main__':
                                     base_feature_dir=os.path.join(cfg.workspace, "dataset", "features"),
                                     save_log_feature=False)
 
-    weak_df = dataset.intialize_and_get_df(cfg.weak, reduced_number_of_data)
-    unlabel_df = dataset.intialize_and_get_df(cfg.unlabel, reduced_number_of_data)
+    weak_df = dataset.initialize_and_get_df(cfg.weak, reduced_number_of_data)
+    unlabel_df = dataset.initialize_and_get_df(cfg.unlabel, reduced_number_of_data)
     # Event if synthetic not used for training, used on validation purpose
-    synthetic_df = dataset.intialize_and_get_df(cfg.synthetic, reduced_number_of_data, download=False)
-    validation_df = dataset.intialize_and_get_df(cfg.validation, reduced_number_of_data)
+    synthetic_df = dataset.initialize_and_get_df(cfg.synthetic, reduced_number_of_data, download=False)
+    validation_df = dataset.initialize_and_get_df(cfg.validation, reduced_number_of_data)
 
     classes = cfg.classes
     many_hot_encoder = ManyHotEncoder(classes, n_frames=cfg.max_frames // pooling_time_ratio)
@@ -271,7 +270,7 @@ if __name__ == '__main__':
                                   transform=transforms_valid)
 
     # Eval 2018
-    eval_2018_df = dataset.intialize_and_get_df(cfg.eval2018, reduced_number_of_data)
+    eval_2018_df = dataset.initialize_and_get_df(cfg.eval2018, reduced_number_of_data)
     eval_2018 = DataLoadDf(eval_2018_df, dataset.get_feature_file, many_hot_encoder.encode_strong_df,
                            transform=transforms_valid)
 

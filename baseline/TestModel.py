@@ -44,7 +44,7 @@ def test_model(model_path, reduced_number_of_data, strore_predicitions_fname=Non
 
     # 2018
     LOG.info("Eval 2018")
-    eval_2018_df = dataset.intialize_and_get_df(cfg.eval2018, reduced_number_of_data)
+    eval_2018_df = dataset.initialize_and_get_df(cfg.eval2018, reduced_number_of_data)
     # Strong
     eval_2018_strong = DataLoadDf(eval_2018_df, dataset.get_feature_file, many_hot_encoder.encode_strong_df,
                                   transform=transforms_valid)
@@ -59,7 +59,7 @@ def test_model(model_path, reduced_number_of_data, strore_predicitions_fname=Non
 
     # Validation 2019
     LOG.info("Validation 2019")
-    validation_df = dataset.intialize_and_get_df(cfg.validation, reduced_number_of_data)
+    validation_df = dataset.initialize_and_get_df(cfg.validation, reduced_number_of_data)
     validation_strong = DataLoadDf(validation_df, dataset.get_feature_file, many_hot_encoder.encode_strong_df,
                                    transform=transforms_valid)
 

@@ -163,6 +163,7 @@ def segment_based_evaluation_df(reference, estimated, time_resolution=1.):
     classes = []
     classes.extend(reference.event_label.dropna().unique())
     classes.extend(estimated.event_label.dropna().unique())
+    classes = list(set(classes))
 
     segment_based_metric = sed_eval.sound_event.SegmentBasedMetrics(
         event_label_list=classes,
@@ -223,7 +224,7 @@ def get_predictions(model, valid_dataset, decoder, save_predictions=None):
 
     if save_predictions is not None:
         LOG.info("Saving predictions at: {}".format(save_predictions))
-        prediction_df.to_csv(save_predictions, index=False)
+        prediction_df.to_csv(save_predictions, index=False, sep="\t")
     return prediction_df
 
 

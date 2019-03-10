@@ -88,7 +88,7 @@ class DatasetDcase2019Task4:
         # create folder if not exist
         create_folder(self.feature_dir)
 
-    def intialize_and_get_df(self, csv_path, subpart_data=None, download=True):
+    def initialize_and_get_df(self, csv_path, subpart_data=None, download=True):
         """ Initialize the dataset, extract the features dataframes
         Args:
             csv_path: str, csv path in the initial dataset

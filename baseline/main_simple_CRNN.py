@@ -126,9 +126,9 @@ if __name__ == '__main__':
                                     base_feature_dir=os.path.join(cfg.workspace, "dataset", "features"),
                                     save_log_feature=False)
 
-    weak_df = dataset.intialize_and_get_df(cfg.weak, reduced_number_of_data)
-    synthetic_df = dataset.intialize_and_get_df(cfg.synthetic, reduced_number_of_data, download=False)
-    validation_df = dataset.intialize_and_get_df(cfg.validation, reduced_number_of_data)
+    weak_df = dataset.initialize_and_get_df(cfg.weak, reduced_number_of_data)
+    synthetic_df = dataset.initialize_and_get_df(cfg.synthetic, reduced_number_of_data, download=False)
+    validation_df = dataset.initialize_and_get_df(cfg.validation, reduced_number_of_data)
 
     classes = DatasetDcase2019Task4.get_classes([weak_df, validation_df, synthetic_df])
 
@@ -222,7 +222,7 @@ if __name__ == '__main__':
     save_best_cb = SaveBest("sup")
 
     # Eval 2018
-    eval_2018_df = dataset.intialize_and_get_df(cfg.eval2018, reduced_number_of_data)
+    eval_2018_df = dataset.initialize_and_get_df(cfg.eval2018, reduced_number_of_data)
     eval_2018 = DataLoadDf(eval_2018_df, dataset.get_feature_file, many_hot_encoder.encode_strong_df,
                            transform=transforms_valid)
 
