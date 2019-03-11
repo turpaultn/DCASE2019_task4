@@ -1,6 +1,6 @@
 ## Baseline
 
-#### System description
+### System description
 The baseline system is based on the idea of the best submission of DCASE 2018 task 4 [1]. The author provided his system code and most of the hyper-parameters of this year baseline close to the hyper-parameters defined by last year winner. However, the network architecture itself remains similar to last year baseline so it is much simpler that the networks used by Lu JiaKai [1]. The parameters of the CRNN model can be found in `config.py`.
 
 The baseline using a mean-teacher model that is composed of two networks that are both the same CRNN. The implementation of Mean teacher model is based on Tarvainen & Valpola from [Curious AI](https://github.com/CuriousAI/mean-teacher) [2]. The model is trained as follows:
@@ -14,7 +14,7 @@ The baseline exploit unlabeled, weakly labeled and synthetic data for training a
 Postrocessing (median filtering) of 5 frames is used to obtain events onset and offset for each file.
 The baseline system includes evaluations of results using **event-based F-score** as metric.
 
-#### Evaluation
+### Evaluation
 
 
 
