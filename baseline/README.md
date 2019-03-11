@@ -1,70 +1,55 @@
 ## Baseline
 
 #### System description
-The baseline system is based on the idea of last year winner: JiaKai, Lu [1].
-He provided his system so the parameter of this system can be closed to the one he used last year.
-The implementation of Mean teacher model is based on Tarvainen & Valpola from Curious AI [work](https://github.com/CuriousAI/mean-teacher) [2]. 
+The baseline system is based on the idea of the best submission of DCASE 2018 task 4 [1]. The author provided his system code and most of the hyper-parameters of this year baseline close to the hyper-parameters defined by last year winner. However, the network architecture itself remains similar to last year baseline so it is much simpler that the networks used by Lu JiaKai [1]. The parameters of the CRNN model can be found in `config.py`.
 
-In this baseline you can run 4 models, they all use the same CRNN base:
-- Single CRNN, with synthetic data only.
-- Single CRNN with weak labeled and synthetic data.
-- Mean teacher model, using unlabeled and weak labeled data (like [1])
-- Mean teacher model, using unlabeled, weak labeled and synthetic data.
-
-
-Parameters of the CRNN model can be found in `config.py`.
-The system is trained for 100 epochs.
-
-
-
-Inputs are 864 frames long. The CRNN model is pooling in time to have 108 frames.
-Postrocessing (median filtering) of 5 frames is used to obtain events onset and offset for each file.
-The baseline system includes evaluations of results using **event-based F-score** as metric. 
-
-#### Script description
-The baseline using a mean-teacher model:
-It is composed of two networks, both the same CRNN.
-- The teacher model is trained regularly. (with synthetic or weak labels depending the data)
+The baseline using a mean-teacher model that is composed of two networks that are both the same CRNN. The implementation of Mean teacher model is based on Tarvainen & Valpola from [Curious AI](https://github.com/CuriousAI/mean-teacher) [2]. The model is trained as follows:
+- The teacher model is trained on synthetic and weakly labeled data. The classification cost is computed at frame level on synthetic data and at clip level on weakly labeled data.
 - The student model is not trained, its weights are a moving average of the teacher model (at each epoch).
-- Inputs of the student model = inputs + gaussian noise
-- A cost for consistency between teacher and student model is applied. (for weak and strong predictions)
+- The inputs of the student model are the inputs of the teacher model + some Gaussian noise
+- A cost for consistency between teacher and student model is applied (for weak and strong predictions).
 
 
-System performance (event-based measures with a 200ms collar on onsets and a 200ms / 20% of the events length collar on offsets):
+The baseline exploit unlabeled, weakly labeled and synthetic data for training and is trained for 100 epochs. Inputs are 864 frames long. The CRNN model is pooling in time to have 108 frames.
+Postrocessing (median filtering) of 5 frames is used to obtain events onset and offset for each file.
+The baseline system includes evaluations of results using **event-based F-score** as metric.
+
+#### Evaluation
+
+
+
+System performance are reported in term of event-based F-scores with a 200ms collar on onsets and a 200ms / 20% of the events length collar on offsets. Additionally, the performance in terms of segment-based F-scores on 1 sec segment are reported for information. Performance are reported on this year validation set (Validation 2019) and on the evaluation set from DCASE 2018 task 4.
  <table class="table table-striped">
  <thead>
  <tr>
- <td colspan="2">F-score metrics (macro averaged)</td> 
- <td>Simple CRNN (synthetic)</td>
- <td>Simple CRNN (synthetic + weak)</td>
- <td>Mean Teacher (no synthetic)</td>
- <td>Mean Teacher (with synthetic)</td>
+ <td colspan="3">F-score metrics (macro averaged)</td>
  </tr>
  </thead>
  <tbody>
  <tr>
+ <td></td>
+  <td><strong>Validation 2019</strong></td>
+ <td>Evaluation 2018</td>
+ </tr>
+ <tr>
  <td><strong>Event-based</strong></td>
- <td>14.68 %</td>
- <td>14.68 %</td>
- <td>14.68 %</td>
- <td>14.68 %</td>
+ <td><strong>23.46 %</strong></td>
+ <td>20.29 %</td>
  </tr>
  <tr>
  <td>Segment-based</td>
- <td>14.68 %</td>
- <td>14.68 %</td>
- <td>14.68 %</td>
- <td>14.68 %</td>
+ <td>54.66 %</td>
+  <td>50.65 %</td>
  </tr>
  </tbody>
  </table>
 
-**Note:** The performance might not be exactly reproducible on a GPU based system. 
-That is why, you can found the weights of the experiments at this adress: 
+**Note:** The performance might not be exactly reproducible on a GPU based system.
+That is why, you can found the weights of the experiments at this adress:
 (launch TestModel.py --model_path="Path_of_model" to get the results)
 
 ### References
- - [1] JiaKai, Lu: Mean teacher convolution system for dcase 2018 task 4. DCASE 2018 Challenge report. September, 2018. 
- - [2] Tarvainen, A. and Valpola, H., 2017. 
- Mean teachers are better role models: Weight-averaged consistency targets improve semi-supervised deep learning results. 
+ - [1] JiaKai, Lu: Mean teacher convolution system for dcase 2018 task 4. DCASE 2018 Challenge report. September, 2018.
+ - [2] Tarvainen, A. and Valpola, H., 2017.
+ Mean teachers are better role models: Weight-averaged consistency targets improve semi-supervised deep learning results.
  In Advances in neural information processing systems (pp. 1195-1204).
