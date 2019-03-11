@@ -60,7 +60,8 @@ System performance (event-based measures with a 200ms collar on onsets and a 200
  </table>
 
 **Note:** The performance might not be exactly reproducible on a GPU based system. 
-That is why, you can found the weights of the experiments at this adress: (launch TestModel.py --model_path="Pathofmodel" to get the results)
+That is why, you can found the weights of the experiments at this adress: 
+(launch TestModel.py --model_path="Path_of_model" to get the results)
 
 ### References
  - [1] JiaKai, Lu: Mean teacher convolution system for dcase 2018 task 4. DCASE 2018 Challenge report. September, 2018. 

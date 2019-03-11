@@ -216,7 +216,8 @@ if __name__ == '__main__':
                       "kwargs": optim_kwargs,
                       'state_dict': optimizer.state_dict()},
         "pooling_time_ratio": pooling_time_ratio,
-        'scaler': scaler.state_dict()
+        'scaler': scaler.state_dict(),
+        "many_hot_encoder": many_hot_encoder.state_dict()
     }
 
     save_best_cb = SaveBest("sup")

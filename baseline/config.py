@@ -32,7 +32,7 @@ beta2_after_rampup = 0.999
 weight_decay_during_rampup = 0.99
 weight_decay_after_rampup = 0.999
 
-max_consistency_cost = 10
+max_consistency_cost = 2
 max_learning_rate = 0.001
 
 median_window = 5
@@ -47,7 +47,7 @@ checkpoint_epochs = 1
 save_best = True
 
 file_path = os.path.abspath(os.path.dirname(__file__))
-classes = pd.read_csv(os.path.join(file_path, "..", validation), sep="\t").event_label.dropna().unique()
+classes = pd.read_csv(os.path.join(file_path, "..", validation), sep="\t").event_label.dropna().sort_values().unique()
 
 crnn_kwargs = {"n_in_channel": 1, "nclass": len(classes), "attention": True, "n_RNN_cell": 64,
                "n_layers_RNN": 2,

@@ -161,6 +161,16 @@ class ManyHotEncoder:
                 result_labels.append([self.labels[i], row[0], row[1]])
         return result_labels
 
+    def state_dict(self):
+        return {"labels": self.labels,
+                "n_frames": self.n_frames}
+
+    @classmethod
+    def load_state_dict(cls, state_dict):
+        labels = state_dict["labels"]
+        n_frames = state_dict["n_frames"]
+        return cls(labels, n_frames)
+
 
 def read_audio(path, target_fs=None):
     """ Read a wav file

@@ -33,12 +33,11 @@ def test_model(state, reduced_number_of_data, strore_predicitions_fname=None):
     LOG.info("Model loaded at epoch: {}".format(state["epoch"]))
     pooling_time_ratio = state["pooling_time_ratio"]
 
-    state = torch.load(model_path)
     crnn.load(parameters=state["model"]["state_dict"])
     scaler = Scaler()
     scaler.load_state_dict(state["scaler"])
     classes = cfg.classes
-    many_hot_encoder = ManyHotEncoder(classes, n_frames=cfg.max_frames // pooling_time_ratio)
+    many_hot_encoder = ManyHotEncoder.load_state_dict(state["many_hot_encoder"])
 
     # ##############
     # Validation
