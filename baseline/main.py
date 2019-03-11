@@ -327,12 +327,6 @@ if __name__ == '__main__':
                                       save_predictions=None)
         valid_events_metric = compute_strong_metrics(predictions, valid_synth_df, pooling_time_ratio)
 
-        #Eval 2018
-        LOG.info("\n ### Eval 2018 metric ### \n")
-        predictions = get_predictions(crnn, eval_2018, many_hot_encoder.decode_strong,
-                                      save_predictions=None)
-        eval_2018_events_metric = compute_strong_metrics(predictions, eval_2018_df, pooling_time_ratio)
-
         LOG.info("\n ### Valid weak metric ### \n")
         weak_metric = get_f_measure_by_class(crnn, len(classes),
                                              DataLoader(valid_weak_data, batch_size=cfg.batch_size))

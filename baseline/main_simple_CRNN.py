@@ -258,11 +258,6 @@ if __name__ == '__main__':
         predictions = get_predictions(crnn, valid_synth_data, many_hot_encoder.decode_strong)
         valid_metric = compute_strong_metrics(predictions, valid_synth_df, pooling_time_ratio)
 
-        # Eval 2018
-        LOG.info("\n ### Eval 2018 ### \n")
-        predictions = get_predictions(crnn, eval_2018, many_hot_encoder.decode_strong)
-        eval2018_metric = compute_strong_metrics(predictions, eval_2018_df, pooling_time_ratio)
-
         state['model']['state_dict'] = crnn.state_dict()
         state['optimizer']['state_dict'] = optimizer.state_dict()
         state['epoch'] = epoch
