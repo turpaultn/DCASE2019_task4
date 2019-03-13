@@ -4,9 +4,9 @@
 The baseline system is based on the idea of the best submission of DCASE 2018 task 4 [1]. The author provided his system code and most of the hyper-parameters of this year baseline close to the hyper-parameters defined by last year winner. However, the network architecture itself remains similar to last year baseline so it is much simpler that the networks used by Lu JiaKai [1]. The parameters of the CRNN model can be found in `config.py`.
 
 The baseline using a mean-teacher model that is composed of two networks that are both the same CRNN. The implementation of Mean teacher model is based on Tarvainen & Valpola from [Curious AI](https://github.com/CuriousAI/mean-teacher) [2]. The model is trained as follows:
-- The teacher model is trained on synthetic and weakly labeled data. The classification cost is computed at frame level on synthetic data and at clip level on weakly labeled data.
-- The student model is not trained, its weights are a moving average of the teacher model (at each epoch).
-- The inputs of the student model are the inputs of the teacher model + some Gaussian noise
+- The student model is trained on synthetic and weakly labeled data. The classification cost is computed at frame level on synthetic data and at clip level on weakly labeled data.
+- The teacher model is not trained, its weights are a moving average of the student model (at each epoch).
+- The inputs of the teacher model are the inputs of the student model + some Gaussian noise
 - A cost for consistency between teacher and student model is applied (for weak and strong predictions).
 
 
