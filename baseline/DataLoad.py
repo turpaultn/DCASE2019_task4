@@ -499,6 +499,7 @@ class ClusterRandomSampler(Sampler):
     """
 
     def __init__(self, data_source, batch_size=None, shuffle=True):
+        super(ClusterRandomSampler, self).__init__(data_source)
         self.data_source = data_source
         if batch_size is not None:
             assert self.data_source.batch_sizes is None, "do not declare batch size in sampler " \
