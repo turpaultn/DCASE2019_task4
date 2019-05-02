@@ -34,12 +34,12 @@ System performance are reported in term of event-based F-scores with a 200ms col
  <tr>
  <td><strong>Event-based</strong></td>
  <td><strong>23.49 %</strong></td>
- <td>20.33 %</td>
+ <td>20.29 %</td>
  </tr>
  <tr>
  <td>Segment-based</td>
  <td>54.66 %</td>
-  <td>50.38 %</td>
+  <td>50.65 %</td>
  </tr>
  </tbody>
  </table>

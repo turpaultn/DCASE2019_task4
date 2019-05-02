@@ -14,7 +14,7 @@ Detailed information about the baseline can be found on the dedicated [baseline 
 ## Dependencies
 
 Python >= 3.6, pytorch >= 1.0, cudatoolkit=9.0, pandas >= 0.24.1, scipy >= 1.2.1, pysoundfile >= 0.10.2,
-librosa >= 0.6.3, youtube-dl >= 2019.1, tqdm >= 4.31.1, ffmpeg >= 4.1, dcase_util >= 0.2.5, sed-eval >= 0.2.1
+librosa >= 0.6.3, youtube-dl >= 2019.4.30, tqdm >= 4.31.1, ffmpeg >= 4.1, dcase_util >= 0.2.5, sed-eval >= 0.2.1
 
 A simplified installation procedure example is provide below for python 3.6 based Anconda distribution for Linux based system:
 1. [install Ananconda](https://www.anaconda.com/download/)
