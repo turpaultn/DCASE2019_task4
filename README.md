@@ -6,6 +6,7 @@ Detailed information about the baseline can be found on the dedicated [baseline 
 
 ## Updates
 6th march: add baseline/Logger.py, update baseline/config.py and update README to send csv files.
+**2nd may: Removing duplicates in dataset/validation/test_dcase2018.csv and dataset/validation/validation.csv**
 
 ## Dependencies
 
@@ -118,6 +119,7 @@ The challenge of exploring the possibility to **exploit a large amount of unbala
 
 Further information on [dcase_website](http://dcase.community/challenge2019/task-sound-event-detection-in-domestic-environments)
 
+You can find the detailed results of dcase2018 task 4 to this [page](https://turpaultn.github.io/dcase2018-results/) and this [paper](https://hal.inria.fr/hal-02114652v2)[6].
 
 ## Authors
 
@@ -139,3 +141,7 @@ In Proceedings of the Detection and Classification of Acoustic Scenes and Events
 
 - [5] J. Salamon, D. MacConnell, M. Cartwright, P. Li, and J. P. Bello. Scaper: A library for soundscape synthesis and augmentation
 In IEEE Workshop on Applications of Signal Processing to Audio and Acoustics (WASPAA), New Paltz, NY, USA, Oct. 2017.
+
+- [6] Romain Serizel, Nicolas Turpault. 
+Sound Event Detection from Partially Annotated Data: Trends and Challenges. 
+IcETRAN conference, Srebrno Jezero, Serbia, June 2019.
