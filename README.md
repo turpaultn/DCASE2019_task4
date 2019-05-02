@@ -2,6 +2,8 @@
 
 You can find discussion about the dcase challenge here: [dcase_discussions](https://groups.google.com/forum/#!forum/dcase-discussions). For more information about the DCASE 2019 challenge please visit the challenge [website](http://dcase.community/challenge2019/).
 
+This task follows [dcase2018 task4](http://dcase.community/challenge2018/task-large-scale-weakly-labeled-semi-supervised-sound-event-detection), you can find an analysis of dcase2018 task4 results [here](https://turpaultn.github.io/dcase2018-results/).
+
 Detailed information about the baseline can be found on the dedicated [baseline page](baseline).
 
 ## Updates
