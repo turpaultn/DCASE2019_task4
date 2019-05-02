@@ -8,6 +8,7 @@ Detailed information about the baseline can be found on the dedicated [baseline 
 
 ## Updates
 6th march: add baseline/Logger.py, update baseline/config.py and update README to send csv files.
+
 **2nd may: Removing duplicates in dataset/validation/test_dcase2018.csv and dataset/validation/validation.csv, changing eventbased results of 0.03%**
 
 ## Dependencies
