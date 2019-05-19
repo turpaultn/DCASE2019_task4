@@ -1,5 +1,11 @@
 ## Baseline
 
+**Important update: 19th of May 2019, problem with annotations (export), the corrected labels are updated. This affects:
+- validation/eval_dcase2018.csv
+- validation/validation.csv
+The results table at the bottom have been updated.
+**
+
 ### System description
 The baseline system is based on the idea of the best submission of DCASE 2018 task 4 [1]. The author provided his system code and most of the hyper-parameters of this year baseline close to the hyper-parameters defined by last year winner. However, the network architecture itself remains similar to last year baseline so it is much simpler that the networks used by Lu JiaKai [1]. The parameters of the CRNN model can be found in `config.py`.
 
@@ -33,13 +39,13 @@ System performance are reported in term of event-based F-scores with a 200ms col
  </tr>
  <tr>
  <td><strong>Event-based</strong></td>
- <td><strong>23.49 %</strong></td>
- <td>20.29 %</td>
+ <td><strong>23.7 %</strong></td>
+ <td>20.6 %</td>
  </tr>
  <tr>
  <td>Segment-based</td>
- <td>54.66 %</td>
-  <td>50.65 %</td>
+ <td>55.2 %</td>
+  <td>51.4 %</td>
  </tr>
  </tbody>
  </table>
