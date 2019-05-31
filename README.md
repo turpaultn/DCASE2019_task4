@@ -13,7 +13,9 @@ Detailed information about the baseline can be found on the dedicated [baseline 
 
 **19th May: Updated the eval_dcase2018.csv and validation.csv. Problem due to annotation export. Files with empty annotations did have annotations.**
 
-**28th May: Updated evaluation dataset 2019.**
+28th May: Updated evaluation dataset 2019.
+
+**31st May: Update link to evaluation dataset (tar.gz) because of compression problem on some OS.**
 
 ## Dependencies
 
@@ -31,7 +33,7 @@ The dataset is composed of two subset that can be downloaded independently:
 
 1. (Real recordings) launch `python download_data.py` (in `baseline/` folder).
 2. (Synthetic clips) download at : [synthetic_dataset](https://doi.org/10.5281/zenodo.2583796).
-3. (Evaluation set) download at: [evaluation dataset](https://filesender.renater.fr/?s=download&token=f3b45667-1a86-c0a8-3e7e-27b11d3f6e40)
+3. (Evaluation set) download at: [evaluation dataset](https://filesender.renater.fr/?s=download&token=21c51300-b257-20a1-d266-04b0dafe78e9). There is 13190 files, find the csv in `dataset/metadata/eval/eval.csv`. (Use tar -xzf eval.tar.gz to uncompress it.)
 
 **It is likely that you'll have download issues with the real recordings.
 Don't hesitate to relaunch `download_data.py` once or twice.
