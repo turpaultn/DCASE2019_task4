@@ -200,7 +200,7 @@ def macro_f_measure(tp, fp, fn):
     return macro_f_score
 
 
-def get_predictions(model, valid_dataset, decoder, save_predictions=None):
+def get_predictions(model, valid_dataset, decoder, pooling_time_ratio=1, save_predictions=None):
     for i, (input, _) in enumerate(valid_dataset):
         [input] = to_cuda_if_available([input])
 
@@ -222,16 +222,21 @@ def get_predictions(model, valid_dataset, decoder, save_predictions=None):
         else:
             prediction_df = prediction_df.append(pred)
 
+    # In seconds
+    prediction_df.onset = prediction_df.onset * pooling_time_ratio / (cfg.sample_rate / cfg.hop_length)
+    prediction_df.offset = prediction_df.offset * pooling_time_ratio / (cfg.sample_rate / cfg.hop_length)
     if save_predictions is not None:
         LOG.info("Saving predictions at: {}".format(save_predictions))
         prediction_df.to_csv(save_predictions, index=False, sep="\t")
     return prediction_df
 
 
-def compute_strong_metrics(predictions, valid_df, pooling_time_ratio):
-    # In seconds
-    predictions.onset = predictions.onset * pooling_time_ratio / (cfg.sample_rate / cfg.hop_length)
-    predictions.offset = predictions.offset * pooling_time_ratio / (cfg.sample_rate / cfg.hop_length)
+def compute_strong_metrics(predictions, valid_df, pooling_time_ratio=None):
+    if pooling_time_ratio is not None:
+        LOG.warning("pooling_time_ratio is deprecated, use it in get_predictions() instead.")
+        # In seconds
+        predictions.onset = predictions.onset * pooling_time_ratio / (cfg.sample_rate / cfg.hop_length)
+        predictions.offset = predictions.offset * pooling_time_ratio / (cfg.sample_rate / cfg.hop_length)
 
     metric_event = event_based_evaluation_df(valid_df, predictions, t_collar=0.200,
                                                       percentage_of_length=0.2)

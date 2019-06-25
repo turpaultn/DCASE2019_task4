@@ -22,7 +22,7 @@ from models.CRNN import CRNN
 import config as cfg
 
 
-def test_model(state, reduced_number_of_data, strore_predicitions_fname=None):
+def test_model(state, reference_csv_path, reduced_number_of_data=None, strore_predicitions_fname=None):
     dataset = DatasetDcase2019Task4(os.path.join(cfg.workspace),
                                     base_feature_dir=os.path.join(cfg.workspace, "dataset", "features"),
                                     save_log_feature=False)
@@ -39,46 +39,27 @@ def test_model(state, reduced_number_of_data, strore_predicitions_fname=None):
     classes = cfg.classes
     many_hot_encoder = ManyHotEncoder.load_state_dict(state["many_hot_encoder"])
 
-    # ##############
-    # Validation
-    # ##############
     crnn = crnn.eval()
     [crnn] = to_cuda_if_available([crnn])
     transforms_valid = get_transforms(cfg.max_frames, scaler=scaler)
 
-    # 2018
-    LOG.info("Eval 2018")
-    eval_2018_df = dataset.initialize_and_get_df(cfg.eval2018, reduced_number_of_data)
-    # Strong
-    eval_2018_strong = DataLoadDf(eval_2018_df, dataset.get_feature_file, many_hot_encoder.encode_strong_df,
-                                  transform=transforms_valid)
-    predictions = get_predictions(crnn, eval_2018_strong, many_hot_encoder.decode_strong)
-    compute_strong_metrics(predictions, eval_2018_df, pooling_time_ratio)
-    # Weak
-    eval_2018_weak = DataLoadDf(eval_2018_df, dataset.get_feature_file, many_hot_encoder.encode_weak,
-                                transform=transforms_valid)
-    weak_metric = get_f_measure_by_class(crnn, len(classes), DataLoader(eval_2018_weak, batch_size=cfg.batch_size))
-    LOG.info("Weak F1-score per class: \n {}".format(pd.DataFrame(weak_metric * 100, many_hot_encoder.labels)))
-    LOG.info("Weak F1-score macro averaged: {}".format(np.mean(weak_metric)))
-
-    # Validation 2019
-    LOG.info("Validation 2019")
-    validation_df = dataset.initialize_and_get_df(cfg.validation, reduced_number_of_data)
-    validation_strong = DataLoadDf(validation_df, dataset.get_feature_file, many_hot_encoder.encode_strong_df,
-                                   transform=transforms_valid)
-
-    predictions = get_predictions(crnn, validation_strong, many_hot_encoder.decode_strong,
-                                  save_predictions=strore_predicitions_fname)
-    compute_strong_metrics(predictions, validation_df, pooling_time_ratio)
-
-    validation_weak = DataLoadDf(validation_df, dataset.get_feature_file, many_hot_encoder.encode_weak,
+    LOG.info(reference_csv_path)
+    df = dataset.initialize_and_get_df(reference_csv_path, reduced_number_of_data)
+    strong_dataload = DataLoadDf(df, dataset.get_feature_file, many_hot_encoder.encode_strong_df,
                                  transform=transforms_valid)
-    weak_metric = get_f_measure_by_class(crnn, len(classes), DataLoader(validation_weak, batch_size=cfg.batch_size))
+
+    predictions = get_predictions(crnn, strong_dataload, many_hot_encoder.decode_strong, pooling_time_ratio,
+                                  save_predictions=strore_predicitions_fname)
+    compute_strong_metrics(predictions, df)
+
+    weak_dataload = DataLoadDf(df, dataset.get_feature_file, many_hot_encoder.encode_weak,
+                               transform=transforms_valid)
+    weak_metric = get_f_measure_by_class(crnn, len(classes), DataLoader(weak_dataload, batch_size=cfg.batch_size))
     LOG.info("Weak F1-score per class: \n {}".format(pd.DataFrame(weak_metric * 100, many_hot_encoder.labels)))
     LOG.info("Weak F1-score macro averaged: {}".format(np.mean(weak_metric)))
 
     # Just an example of how to get the weak predictions from dataframes.
-    # print(audio_tagging_results(validation_df, predictions))
+    # print(audio_tagging_results(df, predictions))
 
 
 if __name__ == '__main__':
@@ -95,4 +76,8 @@ if __name__ == '__main__':
     model_path = f_args.model_path
     expe_state = torch.load(model_path, map_location="cpu")
 
-    test_model(expe_state, reduced_number_of_data, "predictions.csv")
+    test_model(expe_state, cfg.eval2018, reduced_number_of_data)
+    test_model(expe_state, cfg.validation, reduced_number_of_data, "validation2019_predictions.csv")
+
+
+

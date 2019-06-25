@@ -323,9 +323,9 @@ if __name__ == '__main__':
 
         crnn = crnn.eval()
         LOG.info("\n ### Valid synthetic metric ### \n")
-        predictions = get_predictions(crnn, valid_synth_data, many_hot_encoder.decode_strong,
+        predictions = get_predictions(crnn, valid_synth_data, many_hot_encoder.decode_strong, pooling_time_ratio,
                                       save_predictions=None)
-        valid_events_metric = compute_strong_metrics(predictions, valid_synth_df, pooling_time_ratio)
+        valid_events_metric = compute_strong_metrics(predictions, valid_synth_df)
 
         LOG.info("\n ### Valid weak metric ### \n")
         weak_metric = get_f_measure_by_class(crnn, len(classes),

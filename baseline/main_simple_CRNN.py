@@ -235,9 +235,9 @@ if __name__ == '__main__':
 
         crnn = crnn.eval()
         LOG.info("Training synthetic metric:")
-        train_predictions = get_predictions(crnn, train_synth_data, many_hot_encoder.decode_strong,
+        train_predictions = get_predictions(crnn, train_synth_data, many_hot_encoder.decode_strong, pooling_time_ratio,
                                             save_predictions=None)
-        train_metric = compute_strong_metrics(train_predictions, train_synth_df, pooling_time_ratio)
+        train_metric = compute_strong_metrics(train_predictions, train_synth_df)
 
         if not no_weak:
             LOG.info("Training weak metric:")
@@ -255,8 +255,8 @@ if __name__ == '__main__':
             LOG.info("Weak F1-score macro averaged: {}".format(np.mean(weak_metric)))
 
         LOG.info("Valid synthetic metric:")
-        predictions = get_predictions(crnn, valid_synth_data, many_hot_encoder.decode_strong)
-        valid_metric = compute_strong_metrics(predictions, valid_synth_df, pooling_time_ratio)
+        predictions = get_predictions(crnn, valid_synth_data, many_hot_encoder.decode_strong, pooling_time_ratio)
+        valid_metric = compute_strong_metrics(predictions, valid_synth_df)
 
         state['model']['state_dict'] = crnn.state_dict()
         state['optimizer']['state_dict'] = optimizer.state_dict()
