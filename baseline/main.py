@@ -364,4 +364,4 @@ if __name__ == '__main__':
     # Validation
     # ##############
     predicitons_fname = os.path.join(saved_pred_dir, "baseline_validation.csv")
-    test_model(state, reduced_number_of_data, predicitons_fname)
+    test_model(state, cfg.validation,reduced_number_of_data, predicitons_fname)
