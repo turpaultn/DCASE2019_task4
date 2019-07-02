@@ -6,8 +6,10 @@ This task follows [dcase2018 task4](http://dcase.community/challenge2018/task-la
 
 Detailed information about the baseline can be found on the dedicated [baseline page](baseline).
 
+**If you use the dataset or the baseline, please cite [this paper](https://hal.inria.fr/hal-02160855).**
+
 ## Updates
-6th march: add baseline/Logger.py, update baseline/config.py and update README to send csv files.
+6th march: [baseline] add baseline/Logger.py, update baseline/config.py and update README to send csv files.
 
 **2nd May: Removing duplicates in dataset/validation/test_dcase2018.csv and dataset/validation/validation.csv, changing eventbased results of 0.03%**
 
@@ -16,6 +18,8 @@ Detailed information about the baseline can be found on the dedicated [baseline 
 28th May: Updated evaluation dataset 2019.
 
 **31st May: Update link to evaluation dataset (tar.gz) because of compression problem on some OS.**
+
+30th June: [baseline] Update get_predictions (+refactor) to get directly predictions in seconds.
 
 ## Dependencies
 
