@@ -37,7 +37,7 @@ The Domestic Environment Sound Event Detection (DESED) dataset is composed of tw
 
 1. (Real recordings) launch `python download_data.py` (in `baseline/` folder).
 2. (Synthetic clips) download at : [synthetic_dataset](https://doi.org/10.5281/zenodo.2583796).
-3. (Evaluation set) download at: [evaluation dataset](https://filesender.renater.fr/?s=download&token=1604fd6a-7a83-5519-52a1-0cadafcf2214). There is 13190 files, find the csv in `dataset/metadata/eval/eval.csv`. (Use tar -xzf eval.tar.gz to uncompress it.)
+3. (Evaluation set) download at: [evaluation dataset](https://filesender.renater.fr/?s=download&token=5e0b94e3-c19f-42ea-8176-ffc807e4c597). There is 13190 files, find the csv in `dataset/metadata/eval/eval.csv`. (Use tar -xzf eval.tar.gz to uncompress it.)
 
 **It is likely that you'll have download issues with the real recordings.
 Don't hesitate to relaunch `download_data.py` once or twice.
