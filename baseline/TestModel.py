@@ -44,7 +44,7 @@ def test_model(state, reference_csv_path, reduced_number_of_data=None, strore_pr
     transforms_valid = get_transforms(cfg.max_frames, scaler=scaler)
 
     LOG.info(reference_csv_path)
-    df = dataset.initialize_and_get_df(reference_csv_path, reduced_number_of_data)
+    df = dataset.initialize_and_get_df(reference_csv_path, reduced_number_of_data, download=False)
     strong_dataload = DataLoadDf(df, dataset.get_feature_file, many_hot_encoder.encode_strong_df,
                                  transform=transforms_valid)
 

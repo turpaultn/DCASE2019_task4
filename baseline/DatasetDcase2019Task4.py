@@ -139,7 +139,17 @@ class DatasetDcase2019Task4:
         Returns:
             dataframe
         """
+        def wav_file_exists(x, wav_dir):
+            wav_path = os.path.join(wav_dir, x)
+            return os.path.isfile(wav_path)
+
         df = pd.read_csv(meta_name, header=0, sep="\t")
+        wav_dir = DatasetDcase2019Task4.get_audio_dir_path_from_meta(meta_name)
+
+        df['file_exists'] = df['filename'].apply(wav_file_exists, wav_dir=wav_dir)
+        df = df[df['file_exists'] == True]
+        df = df.drop(columns=['file_exists']).reset_index(drop=True)
+
         if subpart_data is not None:
             df = DatasetDcase2019Task4.get_subpart_data(df, subpart_data)
         return df
@@ -238,13 +248,13 @@ class DatasetDcase2019Task4:
             subpart_data: int, number of files to extract features from the csv.
         """
         t1 = time.time()
+        wav_dir = self.get_audio_dir_path_from_meta(csv_audio)
         df_meta = self.get_df_from_meta(csv_audio, subpart_data)
         LOG.info("{} Total file number: {}".format(csv_audio, len(df_meta.filename.unique())))
 
         for ind, wav_name in enumerate(df_meta.filename.unique()):
             if ind % 500 == 0:
                 LOG.debug(ind)
-            wav_dir = self.get_audio_dir_path_from_meta(csv_audio)
             wav_path = os.path.join(wav_dir, wav_name)
 
             out_filename = os.path.splitext(wav_name)[0] + ".npy"

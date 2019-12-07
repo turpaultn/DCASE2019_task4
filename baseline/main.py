@@ -170,20 +170,33 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="")
     parser.add_argument("-s", '--subpart_data', type=int, default=None, dest="subpart_data",
                         help="Number of files to be used. Useful when testing on small number of files.")
-
     parser.add_argument("-n", '--no_synthetic', dest='no_synthetic', action='store_true', default=False,
                         help="Not using synthetic labels during training")
+    parser.add_argument("-m", '--model_path', type=str, default=None, dest="model_path",
+                        help="Path of the model to initialize with.")
+    parser.add_argument("-d", '--no_download', dest='no_download', action='store_true', default=False,
+                        help="Not downloading data based on csv files.")
     f_args = parser.parse_args()
 
     reduced_number_of_data = f_args.subpart_data
     no_synthetic = f_args.no_synthetic
+    model_path = f_args.model_path
+    download = not f_args.no_download
+
     LOG.info("subpart_data = {}".format(reduced_number_of_data))
     LOG.info("Using synthetic data = {}".format(not no_synthetic))
+    LOG.info("Using pre-trained model = {}".format(model_path))
+    LOG.info("Downloading data = {}".format(download))
 
     if no_synthetic:
         add_dir_model_name = "_no_synthetic"
     else:
         add_dir_model_name = "_with_synthetic"
+
+    if model_path:
+        state = torch.load(model_path, map_location="cpu")
+    else:
+        state = None
 
     store_dir = os.path.join("stored_data", "MeanTeacher" + add_dir_model_name)
     saved_model_dir = os.path.join(store_dir, "model")
@@ -192,7 +205,10 @@ if __name__ == '__main__':
     create_folder(saved_model_dir)
     create_folder(saved_pred_dir)
 
-    pooling_time_ratio = cfg.pooling_time_ratio  # --> Be careful, it depends of the model time axis pooling
+    if state:
+        pooling_time_ratio = state["pooling_time_ratio"]
+    else:
+        pooling_time_ratio = cfg.pooling_time_ratio  # --> Be careful, it depends of the model time axis pooling
     # ##############
     # DATA
     # ##############
@@ -200,15 +216,19 @@ if __name__ == '__main__':
                                     base_feature_dir=os.path.join(cfg.workspace, "dataset", "features"),
                                     save_log_feature=False)
 
-    weak_df = dataset.initialize_and_get_df(cfg.weak, reduced_number_of_data)
-    unlabel_df = dataset.initialize_and_get_df(cfg.unlabel, reduced_number_of_data)
+    weak_df = dataset.initialize_and_get_df(cfg.weak, reduced_number_of_data, download=download)
+    unlabel_df = dataset.initialize_and_get_df(cfg.unlabel, reduced_number_of_data, download=download)
     # Event if synthetic not used for training, used on validation purpose
-    synthetic_df = dataset.initialize_and_get_df(cfg.synthetic, reduced_number_of_data, download=False)
-    validation_df = dataset.initialize_and_get_df(cfg.validation, reduced_number_of_data)
+    synthetic_df = dataset.initialize_and_get_df(cfg.synthetic, reduced_number_of_data, download=download)
+    validation_df = dataset.initialize_and_get_df(cfg.validation, reduced_number_of_data, download=download)
 
     classes = cfg.classes
-    many_hot_encoder = ManyHotEncoder(classes, n_frames=cfg.max_frames // pooling_time_ratio)
+    if state:
+        many_hot_encoder = ManyHotEncoder.load_state_dict(state["many_hot_encoder"])
+    else:
+        many_hot_encoder = ManyHotEncoder(classes, n_frames=cfg.max_frames // pooling_time_ratio)
 
+    # maybe use scaler here?
     transforms = get_transforms(cfg.max_frames)
 
     # Divide weak in train and valid
@@ -246,8 +266,12 @@ if __name__ == '__main__':
     # Assume weak data is always the first one
     weak_mask = slice(batch_sizes[0])
 
+
     scaler = Scaler()
-    scaler.calculate_scaler(ConcatDataset(list_dataset))
+    if state:
+        scaler.load_state_dict(state["scaler"])
+    else:
+        scaler.calculate_scaler(ConcatDataset(list_dataset))
 
     LOG.debug(scaler.mean_)
 
@@ -268,45 +292,59 @@ if __name__ == '__main__':
                                   transform=transforms_valid)
 
     # Eval 2018
-    eval_2018_df = dataset.initialize_and_get_df(cfg.eval2018, reduced_number_of_data)
+    eval_2018_df = dataset.initialize_and_get_df(cfg.eval2018, reduced_number_of_data, download=download)
     eval_2018 = DataLoadDf(eval_2018_df, dataset.get_feature_file, many_hot_encoder.encode_strong_df,
                            transform=transforms_valid)
 
     # ##############
     # Model
     # ##############
-    crnn_kwargs = cfg.crnn_kwargs
+
+    if state:
+        crnn_kwargs = state["model"]["kwargs"]
+    else:
+        crnn_kwargs = cfg.crnn_kwargs
+
     crnn = CRNN(**crnn_kwargs)
     crnn_ema = CRNN(**crnn_kwargs)
 
-    crnn.apply(weights_init)
-    crnn_ema.apply(weights_init)
-    LOG.info(crnn)
+    if state:
+        # load state into models
+        crnn.load(parameters=state["model"]["state_dict"])
+        crnn_ema.load(parameters=state["model_ema"]["state_dict"])
+        LOG.info("Model loaded at epoch: {}".format(state["epoch"]))
+    else:
+        crnn.apply(weights_init)
+        crnn_ema.apply(weights_init)
+        LOG.info(crnn)
 
     for param in crnn_ema.parameters():
         param.detach_()
 
-    optim_kwargs = {"lr": 0.001, "betas": (0.9, 0.999)}
-    optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, crnn.parameters()), **optim_kwargs)
-    bce_loss = nn.BCELoss()
+    if not state:
+        optim_kwargs = {"lr": 0.001, "betas": (0.9, 0.999)}
+        optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, crnn.parameters()), **optim_kwargs)
+        bce_loss = nn.BCELoss()
 
-    state = {
-        'model': {"name": crnn.__class__.__name__,
-                  'args': '',
-                  "kwargs": crnn_kwargs,
-                  'state_dict': crnn.state_dict()},
-        'model_ema': {"name": crnn_ema.__class__.__name__,
+        state = {
+            'model': {"name": crnn.__class__.__name__,
                       'args': '',
                       "kwargs": crnn_kwargs,
-                      'state_dict': crnn_ema.state_dict()},
-        'optimizer': {"name": optimizer.__class__.__name__,
-                      'args': '',
-                      "kwargs": optim_kwargs,
-                      'state_dict': optimizer.state_dict()},
-        "pooling_time_ratio": pooling_time_ratio,
-        "scaler": scaler.state_dict(),
-        "many_hot_encoder": many_hot_encoder.state_dict()
-    }
+                      'state_dict': crnn.state_dict()},
+            'model_ema': {"name": crnn_ema.__class__.__name__,
+                          'args': '',
+                          "kwargs": crnn_kwargs,
+                          'state_dict': crnn_ema.state_dict()},
+            'optimizer': {"name": optimizer.__class__.__name__,
+                          'args': '',
+                          "kwargs": optim_kwargs,
+                          'state_dict': optimizer.state_dict()},
+            "pooling_time_ratio": pooling_time_ratio,
+            "scaler": scaler.state_dict(),
+            "many_hot_encoder": many_hot_encoder.state_dict()
+        }
+    else:
+        optimizer = state['optimizer']
 
     save_best_cb = SaveBest("sup")
 
