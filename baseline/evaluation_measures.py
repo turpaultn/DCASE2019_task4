@@ -231,7 +231,7 @@ def get_predictions(model, valid_dataset, decoder, pooling_time_ratio=1, save_pr
     return prediction_df
 
 
-def compute_strong_metrics(predictions, valid_df, pooling_time_ratio=None):
+def compute_strong_metrics(predictions, valid_df, pooling_time_ratio=None, log=True):
     if pooling_time_ratio is not None:
         LOG.warning("pooling_time_ratio is deprecated, use it in get_predictions() instead.")
         # In seconds
@@ -241,8 +241,9 @@ def compute_strong_metrics(predictions, valid_df, pooling_time_ratio=None):
     metric_event = event_based_evaluation_df(valid_df, predictions, t_collar=0.200,
                                                       percentage_of_length=0.2)
     metric_segment = segment_based_evaluation_df(valid_df, predictions, time_resolution=1.)
-    LOG.info(metric_event)
-    LOG.info(metric_segment)
+    if log:
+        LOG.info(metric_event)
+        LOG.info(metric_segment)
     return metric_event
 
 

@@ -247,6 +247,7 @@ class DatasetDcase2019Task4:
                 the associated wav_filename is Yname_start_end.wav
             subpart_data: int, number of files to extract features from the csv.
         """
+        # TODO: Add signal-to-noise ratio here if applicable to curriculum learning
         t1 = time.time()
         wav_dir = self.get_audio_dir_path_from_meta(csv_audio)
         df_meta = self.get_df_from_meta(csv_audio, subpart_data)

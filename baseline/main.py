@@ -164,6 +164,23 @@ def train(train_loader, model, optimizer, epoch, ema_model=None, weak_mask=None,
         '{meters}'.format(
             epoch, epoch_time, meters=meters))
 
+def sort_weak_df(weak_df):
+    # sort by classes per file counts
+    weak_df['event_labels_count'] = weak_df['event_labels'].apply(lambda x : x.count(','))
+    weak_df = weak_df.sort_values(by='event_labels_count', ascending=True)
+    # bring df back to original state
+    weak_df = weak_df.reset_index(drop=True)
+    weak_df = weak_df.drop(columns='event_labels_count')
+    return weak_df
+
+def sort_synthetic_df(synthetic_df):
+    # sort by classes per file counts
+    label_counts_df = synthetic_df[['filename', 'event_label']].groupby('filename').count().rename(columns={"event_label" : "event_labels_count"})
+    synthetic_df = synthetic_df.join(label_counts_df, on='filename', how='outer')
+    # bring df back to original state
+    synthetic_df = synthetic_df.sort_values(by='event_labels_count', ascending=True)
+    synthetic_df = synthetic_df.drop(columns='event_labels_count')
+    return synthetic_df
 
 if __name__ == '__main__':
     LOG.info("MEAN TEACHER")
@@ -182,6 +199,7 @@ if __name__ == '__main__':
     no_synthetic = f_args.no_synthetic
     model_path = f_args.model_path
     download = not f_args.no_download
+    sort = True # TODO: move to arguments
 
     LOG.info("subpart_data = {}".format(reduced_number_of_data))
     LOG.info("Using synthetic data = {}".format(not no_synthetic))
@@ -218,6 +236,7 @@ if __name__ == '__main__':
 
     weak_df = dataset.initialize_and_get_df(cfg.weak, reduced_number_of_data, download=download)
     unlabel_df = dataset.initialize_and_get_df(cfg.unlabel, reduced_number_of_data, download=download)
+
     # Event if synthetic not used for training, used on validation purpose
     synthetic_df = dataset.initialize_and_get_df(cfg.synthetic, reduced_number_of_data, download=download)
     validation_df = dataset.initialize_and_get_df(cfg.validation, reduced_number_of_data, download=download)
@@ -248,6 +267,11 @@ if __name__ == '__main__':
     train_synth_df.offset = train_synth_df.offset * cfg.sample_rate // cfg.hop_length // pooling_time_ratio
     LOG.debug(valid_synth_df.event_label.value_counts())
 
+    if sort:
+        train_weak_df = sort_weak_df(train_weak_df)
+        train_synth_df = sort_synthetic_df(train_synth_df)
+        # TODO: Research on cc learning, is the validation set ordered accordingly?
+
     train_weak_data = DataLoadDf(train_weak_df, dataset.get_feature_file, many_hot_encoder.encode_strong_df,
                                  transform=transforms)
     unlabel_data = DataLoadDf(unlabel_df, dataset.get_feature_file, many_hot_encoder.encode_strong_df,
@@ -266,7 +290,6 @@ if __name__ == '__main__':
     # Assume weak data is always the first one
     weak_mask = slice(batch_sizes[0])
 
-
     scaler = Scaler()
     if state:
         scaler.load_state_dict(state["scaler"])
@@ -281,7 +304,8 @@ if __name__ == '__main__':
 
     concat_dataset = ConcatDataset(list_dataset)
     sampler = MultiStreamBatchSampler(concat_dataset,
-                                      batch_sizes=batch_sizes)
+                                      batch_sizes=batch_sizes,
+                                      shuffle=False)
 
     training_data = DataLoader(concat_dataset, batch_sampler=sampler)
 
@@ -369,7 +393,7 @@ if __name__ == '__main__':
         LOG.info("\n ### Valid synthetic metric ### \n")
         predictions = get_predictions(crnn, valid_synth_data, many_hot_encoder.decode_strong, pooling_time_ratio,
                                       save_predictions=None)
-        valid_events_metric = compute_strong_metrics(predictions, valid_synth_df)
+        valid_events_metric = compute_strong_metrics(predictions, valid_synth_df, log=False)
 
         LOG.info("\n ### Valid weak metric ### \n")
         weak_metric = get_f_measure_by_class(crnn, len(classes),
