@@ -30,21 +30,28 @@ class CRNN(nn.Module):
             self.dense_softmax = nn.Linear(n_RNN_cell*2, nclass)
             self.softmax = nn.Softmax(dim=-1)
 
+    def freeze_cnn(self):
+        for param in self.cnn.parameters():
+            param.requires_grad = False
+
     def load_cnn(self, parameters):
         self.cnn.load(parameters)
         if not self.train_cnn:
             for param in self.cnn.parameters():
                 param.requires_grad = False
 
-    def load(self, filename=None, parameters=None):
+    def load(self, filename=None, parameters=None, load_cnn=True, load_rnn=True, load_dense=True):
         if filename is not None:
             parameters = torch.load(filename)
         if parameters is None:
             raise NotImplementedError("load is a filename or a list of parameters (state_dict)")
 
-        self.cnn.load(parameters=parameters["cnn"])
-        self.rnn.load_state_dict(parameters["rnn"])
-        self.dense.load_state_dict(parameters["dense"])
+        if load_cnn:
+            self.cnn.load(parameters=parameters["cnn"])
+        if load_rnn:
+            self.rnn.load_state_dict(parameters["rnn"])
+        if load_dense:
+            self.dense.load_state_dict(parameters["dense"])
 
     def state_dict(self, destination=None, prefix='', keep_vars=False):
         state_dict = {"cnn": self.cnn.state_dict(destination=destination, prefix=prefix, keep_vars=keep_vars),

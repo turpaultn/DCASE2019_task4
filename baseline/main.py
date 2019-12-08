@@ -183,6 +183,7 @@ def sort_synthetic_df(synthetic_df):
     return synthetic_df
 
 if __name__ == '__main__':
+    print("MEAN TEACHER STARTS")
     LOG.info("MEAN TEACHER")
     parser = argparse.ArgumentParser(description="")
     parser.add_argument("-s", '--subpart_data', type=int, default=None, dest="subpart_data",
@@ -305,7 +306,7 @@ if __name__ == '__main__':
     concat_dataset = ConcatDataset(list_dataset)
     sampler = MultiStreamBatchSampler(concat_dataset,
                                       batch_sizes=batch_sizes,
-                                      shuffle=False)
+                                      shuffle=(not sort))
 
     training_data = DataLoader(concat_dataset, batch_sampler=sampler)
 
@@ -332,14 +333,15 @@ if __name__ == '__main__':
     crnn = CRNN(**crnn_kwargs)
     crnn_ema = CRNN(**crnn_kwargs)
 
+    crnn.apply(weights_init)
+    crnn_ema.apply(weights_init)
+
     if state:
         # load state into models
-        crnn.load(parameters=state["model"]["state_dict"])
-        crnn_ema.load(parameters=state["model_ema"]["state_dict"])
+        crnn.load(parameters=state["model"]["state_dict"], load_rnn=True, load_dense=False)
+        crnn_ema.load(parameters=state["model_ema"]["state_dict"], load_rnn=True, load_dense=False)
         LOG.info("Model loaded at epoch: {}".format(state["epoch"]))
     else:
-        crnn.apply(weights_init)
-        crnn_ema.apply(weights_init)
         LOG.info(crnn)
 
     for param in crnn_ema.parameters():
@@ -378,6 +380,10 @@ if __name__ == '__main__':
 
     save_best_cb = SaveBest("sup")
 
+    if state:
+        crnn.freeze_cnn()
+        crnn_ema.freeze_cnn()
+
     # ##############
     # Train
     # ##############
@@ -390,16 +396,16 @@ if __name__ == '__main__':
         train(training_data, crnn, optimizer, epoch, ema_model=crnn_ema, weak_mask=weak_mask, strong_mask=strong_mask)
 
         crnn = crnn.eval()
-        LOG.info("\n ### Valid synthetic metric ### \n")
+        # LOG.info("\n ### Valid synthetic metric ### \n")
         predictions = get_predictions(crnn, valid_synth_data, many_hot_encoder.decode_strong, pooling_time_ratio,
                                       save_predictions=None)
         valid_events_metric = compute_strong_metrics(predictions, valid_synth_df, log=False)
 
-        LOG.info("\n ### Valid weak metric ### \n")
+        # LOG.info("\n ### Valid weak metric ### \n")
         weak_metric = get_f_measure_by_class(crnn, len(classes),
                                              DataLoader(valid_weak_data, batch_size=cfg.batch_size))
 
-        LOG.info("Weak F1-score per class: \n {}".format(pd.DataFrame(weak_metric * 100, many_hot_encoder.labels)))
+        # LOG.info("Weak F1-score per class: \n {}".format(pd.DataFrame(weak_metric * 100, many_hot_encoder.labels)))
         LOG.info("Weak F1-score macro averaged: {}".format(np.mean(weak_metric)))
 
         state['model']['state_dict'] = crnn.state_dict()
