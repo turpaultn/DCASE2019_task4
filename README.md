@@ -1,3 +1,7 @@
+## We forked this repository for the purposes of our university's research classes [work in progress]
+
+Original README content below:
+
 # DCASE2019 task4: Sound event detection in domestic environments (DESED dataset and baseline)
 
 You can find discussion about the dcase challenge here: [dcase_discussions](https://groups.google.com/forum/#!forum/dcase-discussions). For more information about the DCASE 2019 challenge please visit the challenge [website](http://dcase.community/challenge2019/).
