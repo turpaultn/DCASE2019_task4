@@ -324,8 +324,16 @@ if __name__ == '__main__':
     if not state:
         optim_kwargs = {"lr": 0.001, "betas": (0.9, 0.999)}
         optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, crnn.parameters()), **optim_kwargs)
-        bce_loss = nn.BCELoss()
+    else:
+        optim_kwargs = state['optimizer']['kwargs']
+        if state['optimizer']['name'] == 'Adam':
+            optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, crnn.parameters()), **optim_kwargs)
+            optimizer.load_state_dict(state['optimizer']['state_dict'])
+        else:
+            NotImplementedError("Only models trained with Adam optimizer supported for now")
 
+    bce_loss = nn.BCELoss() # ? unused ?
+    if not state:
         state = {
             'model': {"name": crnn.__class__.__name__,
                       'args': '',
@@ -343,8 +351,6 @@ if __name__ == '__main__':
             "scaler": scaler.state_dict(),
             "many_hot_encoder": many_hot_encoder.state_dict()
         }
-    else:
-        optimizer = state['optimizer']
 
     save_best_cb = SaveBest("sup")
 
