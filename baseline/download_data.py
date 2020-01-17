@@ -110,8 +110,8 @@ def download_file(result_dir, filename):
 
 
 def download(filenames, result_dir, n_jobs=1, chunk_size=10, base_dir_missing_files=".."):
-    """ download files in parallel from youtube given a csv file listing files to download. It also stores not downloaded
-    files with their associated error in "missing_files_[csv_file].csv"
+    """ download files in parallel from youtube given a tsv file listing files to download. It also stores not downloaded
+    files with their associated error in "missing_files_[tsv_file].tsv"
 
        Parameters
        ----------
@@ -164,7 +164,7 @@ def download(filenames, result_dir, n_jobs=1, chunk_size=10, base_dir_missing_fi
 
             missing_files.columns = ["filename", "error"]
             missing_files.to_csv(os.path.join(base_dir_missing_files,
-                                              "missing_files_" + result_dir.split('/')[-1] + ".csv"),
+                                              "missing_files_" + result_dir.split('/')[-1] + ".tsv"),
                                  index=False, sep="\t")
 
     except KeyboardInterrupt:
@@ -206,7 +206,7 @@ if __name__ == "__main__":
     CHUNK_SIZE = 10
 
     LOG.info("Validation data")
-    test = os.path.join(dataset_folder, "metadata", "validation", "validation.csv")
+    test = os.path.join(dataset_folder, "metadata", "validation", "validation.tsv")
     result_dir = os.path.join(dataset_folder, "audio", "validation")
     # read metadata file and get only one filename once
     df = pd.read_csv(test, header=0, sep='\t')
@@ -215,7 +215,7 @@ if __name__ == "__main__":
              base_dir_missing_files=base_missing_files_folder)
 
     LOG.info("Train, weak data")
-    train_weak = os.path.join(dataset_folder, "metadata", "train", "weak.csv")
+    train_weak = os.path.join(dataset_folder, "metadata", "train", "weak.tsv")
     result_dir = os.path.join(dataset_folder, "audio", "train", "weak")
     # read metadata file and get only one filename once
     df = pd.read_csv(train_weak, header=0, sep='\t')
@@ -224,7 +224,7 @@ if __name__ == "__main__":
              base_dir_missing_files=base_missing_files_folder)
 
     LOG.info("Train, unlabel in domain data")
-    train_unlabel_in_domain = os.path.join(dataset_folder, "metadata", "train", "unlabel_in_domain.csv")
+    train_unlabel_in_domain = os.path.join(dataset_folder, "metadata", "train", "unlabel_in_domain.tsv")
     result_dir = os.path.join(dataset_folder, "audio", "train", "unlabel_in_domain")
     # read metadata file and get only one filename once
     df = pd.read_csv(train_unlabel_in_domain, header=0, sep='\t')

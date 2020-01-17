@@ -285,5 +285,11 @@ if __name__ == '__main__':
     # ##############
     # Validation
     # ##############
-    predicitons_fname = os.path.join(saved_pred_dir, "baseline_validation.csv")
-    test_model(state, reduced_number_of_data, predicitons_fname)
+    predicitons_fname = os.path.join(saved_pred_dir, "baseline_validation.tsv")
+    test_model(state, cfg.validation, reduced_number_of_data, predicitons_fname)
+
+    # ##############
+    # Evaluation
+    # ##############
+    predicitons_eval2019_fname = os.path.join(saved_pred_dir, "baseline_eval2019.tsv")
+    test_model(state, cfg.eval_desed, reduced_number_of_data, predicitons_eval2019_fname)

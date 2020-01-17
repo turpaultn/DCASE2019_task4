@@ -22,7 +22,7 @@ from models.CRNN import CRNN
 import config as cfg
 
 
-def test_model(state, reference_csv_path, reduced_number_of_data=None, strore_predicitions_fname=None):
+def test_model(state, reference_tsv_path, reduced_number_of_data=None, strore_predicitions_fname=None):
     dataset = DatasetDcase2019Task4(os.path.join(cfg.workspace),
                                     base_feature_dir=os.path.join(cfg.workspace, "dataset", "features"),
                                     save_log_feature=False)
@@ -43,8 +43,8 @@ def test_model(state, reference_csv_path, reduced_number_of_data=None, strore_pr
     [crnn] = to_cuda_if_available([crnn])
     transforms_valid = get_transforms(cfg.max_frames, scaler=scaler)
 
-    LOG.info(reference_csv_path)
-    df = dataset.initialize_and_get_df(reference_csv_path, reduced_number_of_data)
+    LOG.info(reference_tsv_path)
+    df = dataset.initialize_and_get_df(reference_tsv_path, reduced_number_of_data)
     strong_dataload = DataLoadDf(df, dataset.get_feature_file, many_hot_encoder.encode_strong_df,
                                  transform=transforms_valid)
 
@@ -77,7 +77,9 @@ if __name__ == '__main__':
     expe_state = torch.load(model_path, map_location="cpu")
 
     test_model(expe_state, cfg.eval2018, reduced_number_of_data)
-    test_model(expe_state, cfg.validation, reduced_number_of_data, "validation2019_predictions.csv")
+    test_model(expe_state, cfg.validation, reduced_number_of_data, "validation2019_predictions.tsv")
+
+    test_model(expe_state, cfg.eval_desed, reduced_number_of_data, "eval2019_predictions.tsv")
 
 
 

@@ -9,17 +9,19 @@ Detailed information about the baseline can be found on the dedicated [baseline 
 **If you use the dataset or the baseline, please cite [this paper](https://hal.inria.fr/hal-02160855).**
 
 ## Updates
-6th march: [baseline] add baseline/Logger.py, update baseline/config.py and update README to send csv files.
+**17th January 2020: adding public evaluation set, link to Desed, and change the format from csv to tsv to match Desed dataset.**
 
-**2nd May: Removing duplicates in dataset/validation/test_dcase2018.csv and dataset/validation/validation.csv, changing eventbased results of 0.03%**
+6th march 2019: [baseline] add baseline/Logger.py, update baseline/config.py and update README to send csv files.
 
-**19th May: Updated the eval_dcase2018.csv and validation.csv. Problem due to annotation export. Files with empty annotations did have annotations.**
+**2nd May 2019: Removing duplicates in dataset/validation/test_dcase2018.csv and dataset/validation/validation.csv, changing eventbased results of 0.03%**
 
-28th May: Updated evaluation dataset 2019.
+**19th May 2019: Updated the eval_dcase2018.csv and validation.csv. Problem due to annotation export. Files with empty annotations did have annotations.**
 
-**31st May: Update link to evaluation dataset (tar.gz) because of compression problem on some OS.**
+28th May 2019: Updated evaluation dataset 2019.
 
-30th June: [baseline] Update get_predictions (+refactor) to get directly predictions in seconds.
+**31st May 2019: Update link to evaluation dataset (tar.gz) because of compression problem on some OS.**
+
+30th June 2019: [baseline] Update get_predictions (+refactor) to get directly predictions in seconds.
 
 ## Dependencies
 
@@ -37,7 +39,9 @@ The dataset is composed of two subset that can be downloaded independently:
 
 1. (Real recordings) launch `python download_data.py` (in `baseline/` folder).
 2. (Synthetic clips) download at : [synthetic_dataset](https://doi.org/10.5281/zenodo.2583796).
-3. (Evaluation set) download at: [evaluation dataset](https://filesender.renater.fr/?s=download&token=21c51300-b257-20a1-d266-04b0dafe78e9). There is 13190 files, find the csv in `dataset/metadata/eval/eval.csv`. (Use tar -xzf eval.tar.gz to uncompress it.)
+3. (Public evaluation set: Youtube subset) download at: [evaluation dataset](https://zenodo.org/record/3588172).
+It contains 692 Youtube files. 
+4. Synthetic evaluation set: Find information here to download them: [Desed repo](https://github.com/turpaultn/DESED)
 
 **It is likely that you'll have download issues with the real recordings.
 Don't hesitate to relaunch `download_data.py` once or twice.
