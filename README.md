@@ -1,4 +1,4 @@
-# DCASE2019 task4: Sound event detection in domestic environments (dataset and baseline)
+# DCASE2019 task4: Sound event detection in domestic environments (DESED dataset and baseline)
 
 You can find discussion about the dcase challenge here: [dcase_discussions](https://groups.google.com/forum/#!forum/dcase-discussions). For more information about the DCASE 2019 challenge please visit the challenge [website](http://dcase.community/challenge2019/).
 
@@ -34,8 +34,8 @@ A simplified installation procedure example is provide below for python 3.6 base
 
 **Note:** `The baseline and download script have been tested with python 3.6, on linux (CentOS 7)`
 
-## Dataset
-The dataset is composed of two subset that can be downloaded independently:
+## DESED Dataset
+The Domestic Environment Sound Event Detection (DESED) dataset is composed of two subset that can be downloaded independently:
 
 1. (Real recordings) launch `python download_data.py` (in `baseline/` folder).
 2. (Synthetic clips) download at : [synthetic_dataset](https://doi.org/10.5281/zenodo.2583796).
@@ -79,7 +79,7 @@ dataset root
 ```
 
 #### Synthetic data (1.8Gb)
-Freesound dataset [1,2]: A subset of [FSD](https://datasets.freesound.org/fsd/) is used as foreground sound events for the synthetic subset of the dataset for DCASE 2019 task 4. FSD is a large-scale, general-purpose audio dataset composed of Freesound content annotated with labels from the AudioSet Ontology [3].
+Freesound dataset [1,2]: A subset of [FSD](https://datasets.freesound.org/fsd/) is used as foreground sound events for the synthetic subset of the DESED dataset. FSD is a large-scale, general-purpose audio dataset composed of Freesound content annotated with labels from the AudioSet Ontology [3].
 
 SINS dataset [4]: The derivative of the SINS dataset used for DCASE2018 task 5 is used as background for the synthetic subset of the dataset for DCASE 2019 task 4.
 The SINS dataset contains a continuous recording of one person living in a vacation home over a period of one week.
