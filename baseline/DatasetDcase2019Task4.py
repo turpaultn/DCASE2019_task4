@@ -41,14 +41,15 @@ class DatasetDcase2019Task4:
                 - test_dcase2018.tsv
                 - eval_dcase2018.tsv
             -eval
-                - Will be defined at evaluation release.
+                - public.tsv
         - audio
             - train
                 - weak
                 - unlabel_in_domain
                 - synthetic_data
             - validation
-            - eval (empty before evaluation)
+            - eval
+                - public
 
     Args:
         local_path: str, (Default value = "") base directory where the dataset is, to be changed if
@@ -157,7 +158,7 @@ class DatasetDcase2019Task4:
         """
         base_filepath = os.path.splitext(filepath)[0]
         audio_dir = base_filepath.replace("metadata", "audio")
-        if audio_dir.split('/')[-2] in ['validation', 'eval']:
+        if audio_dir.split('/')[-2] in ['validation']:
             audio_dir = '/'.join(audio_dir.split('/')[:-1])
         audio_dir = os.path.abspath(audio_dir)
         return audio_dir
