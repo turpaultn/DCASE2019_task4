@@ -126,7 +126,7 @@ def train(train_loader, model, optimizer, epoch, ema_model=None, weak_mask=None,
 
             consistency_cost = cfg.max_consistency_cost * rampup_value
             meters.update('Consistency weight', consistency_cost)
-            # Take only the consistence with weak and unlabel
+            # Take consistency about weak predictions (all data)
             consistency_loss_strong = consistency_cost * consistency_criterion_strong(strong_pred,
                                                                                       strong_pred_ema)
             meters.update('Consistency strong', consistency_loss_strong.item())
@@ -136,7 +136,7 @@ def train(train_loader, model, optimizer, epoch, ema_model=None, weak_mask=None,
                 loss = consistency_loss_strong
 
             meters.update('Consistency weight', consistency_cost)
-            # Take only the consistence with weak and unlabel
+            # Take consistency about strong predictions (all data)
             consistency_loss_weak = consistency_cost * consistency_criterion_strong(weak_pred, weak_pred_ema)
             meters.update('Consistency weak', consistency_loss_weak.item())
             if loss is not None:
