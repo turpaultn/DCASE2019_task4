@@ -38,16 +38,19 @@ System performance are reported in term of event-based F-scores with a 200ms col
  <tbody>
  <tr>
  <td></td>
+ <td><strong>Public evaluation 2019 (Youtube)</strong></td>
   <td><strong>Validation 2019</strong></td>
  <td>Evaluation 2018</td>
  </tr>
  <tr>
  <td><strong>Event-based</strong></td>
+ <td><strong> 29.0 %</strong></td>
  <td><strong>23.7 %</strong></td>
  <td>20.6 %</td>
  </tr>
  <tr>
  <td>Segment-based</td>
+ <td> 58.54 %</td>
  <td>55.2 %</td>
   <td>51.4 %</td>
  </tr>

@@ -61,9 +61,9 @@ def train(train_loader, model, optimizer, epoch, ema_model=None, weak_mask=None,
     :param strong_mask: mask the batch to get only the strong labeled data (used to calcultate the loss)
     """
     class_criterion = nn.BCELoss()
-    consistency_criterion_strong = nn.MSELoss()
-    [class_criterion, consistency_criterion_strong] = to_cuda_if_available(
-        [class_criterion, consistency_criterion_strong])
+    consistency_criterion = nn.MSELoss()
+    [class_criterion, consistency_criterion] = to_cuda_if_available(
+        [class_criterion, consistency_criterion])
 
     meters = AverageMeterSet()
 
@@ -126,9 +126,9 @@ def train(train_loader, model, optimizer, epoch, ema_model=None, weak_mask=None,
 
             consistency_cost = cfg.max_consistency_cost * rampup_value
             meters.update('Consistency weight', consistency_cost)
-            # Take only the consistence with weak and unlabel
-            consistency_loss_strong = consistency_cost * consistency_criterion_strong(strong_pred,
-                                                                                      strong_pred_ema)
+            # Take consistency about strong predictions (all data)
+            consistency_loss_strong = consistency_cost * consistency_criterion(strong_pred,
+                                                                               strong_pred_ema)
             meters.update('Consistency strong', consistency_loss_strong.item())
             if loss is not None:
                 loss += consistency_loss_strong
@@ -136,8 +136,8 @@ def train(train_loader, model, optimizer, epoch, ema_model=None, weak_mask=None,
                 loss = consistency_loss_strong
 
             meters.update('Consistency weight', consistency_cost)
-            # Take only the consistence with weak and unlabel
-            consistency_loss_weak = consistency_cost * consistency_criterion_strong(weak_pred, weak_pred_ema)
+            # Take consistency about weak predictions (all data)
+            consistency_loss_weak = consistency_cost * consistency_criterion(weak_pred, weak_pred_ema)
             meters.update('Consistency weak', consistency_loss_weak.item())
             if loss is not None:
                 loss += consistency_loss_weak
@@ -265,7 +265,7 @@ if __name__ == '__main__':
     valid_synth_data = DataLoadDf(valid_synth_df, dataset.get_feature_file, many_hot_encoder.encode_strong_df,
                                   transform=transforms_valid)
     valid_weak_data = DataLoadDf(valid_weak_df, dataset.get_feature_file, many_hot_encoder.encode_weak,
-                                  transform=transforms_valid)
+                                 transform=transforms_valid)
 
     # Eval 2018
     eval_2018_df = dataset.initialize_and_get_df(cfg.eval2018, reduced_number_of_data)
@@ -363,5 +363,11 @@ if __name__ == '__main__':
     # ##############
     # Validation
     # ##############
-    predicitons_fname = os.path.join(saved_pred_dir, "baseline_validation.csv")
-    test_model(state, cfg.validation,reduced_number_of_data, predicitons_fname)
+    predicitons_fname = os.path.join(saved_pred_dir, "baseline_validation.tsv")
+    test_model(state, cfg.validation, reduced_number_of_data, predicitons_fname)
+
+    # ##############
+    # Evaluation
+    # ##############
+    predicitons_eval2019_fname = os.path.join(saved_pred_dir, "baseline_eval2019.tsv")
+    test_model(state, cfg.eval_desed, reduced_number_of_data, predicitons_eval2019_fname)

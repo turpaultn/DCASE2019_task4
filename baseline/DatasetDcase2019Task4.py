@@ -33,22 +33,23 @@ class DatasetDcase2019Task4:
         - download_data.py
         - metadata
             - train
-                - weak.csv
-                - unlabel_in_domain.csv
-                - synthetic_data.csv
+                - weak.tsv
+                - unlabel_in_domain.tsv
+                - synthetic_data.tsv
             - validation
-                - validation.csv
-                - test_dcase2018.csv
-                - eval_dcase2018.csv
+                - validation.tsv
+                - test_dcase2018.tsv
+                - eval_dcase2018.tsv
             -eval
-                - Will be defined at evaluation release.
+                - public.tsv
         - audio
             - train
                 - weak
                 - unlabel_in_domain
                 - synthetic_data
             - validation
-            - eval (empty before evaluation)
+            - eval
+                - public
 
     Args:
         local_path: str, (Default value = "") base directory where the dataset is, to be changed if
@@ -88,10 +89,10 @@ class DatasetDcase2019Task4:
         # create folder if not exist
         create_folder(self.feature_dir)
 
-    def initialize_and_get_df(self, csv_path, subpart_data=None, download=True):
+    def initialize_and_get_df(self, tsv_path, subpart_data=None, download=True):
         """ Initialize the dataset, extract the features dataframes
         Args:
-            csv_path: str, csv path in the initial dataset
+            tsv_path: str, tsv path in the initial dataset
             subpart_data: int, the number of file to take in the dataframe if taking a small part of the dataset.
             download: bool, whether or not to download the data from the internet (youtube).
 
@@ -99,7 +100,7 @@ class DatasetDcase2019Task4:
             pd.DataFrame
             The dataframe containing the right features and labels
         """
-        meta_name = os.path.join(self.local_path, csv_path)
+        meta_name = os.path.join(self.local_path, tsv_path)
         if download:
             self.download_from_meta(meta_name, subpart_data)
         return self.extract_features_from_meta(meta_name, subpart_data)
@@ -130,10 +131,10 @@ class DatasetDcase2019Task4:
     @staticmethod
     def get_df_from_meta(meta_name, subpart_data=None):
         """
-        Extract a pandas dataframe from a csv file
+        Extract a pandas dataframe from a tsv file
 
         Args:
-            meta_name : str, path of the csv file to extract the df
+            meta_name : str, path of the tsv file to extract the df
             subpart_data: int, the number of file to take in the dataframe if taking a small part of the dataset.
 
         Returns:
@@ -149,7 +150,7 @@ class DatasetDcase2019Task4:
         """ Get the corresponding audio dir from a meta filepath
 
         Args:
-            filepath : str, path of the meta filename (csv)
+            filepath : str, path of the meta filename (tsv)
 
         Returns:
             str
@@ -157,18 +158,18 @@ class DatasetDcase2019Task4:
         """
         base_filepath = os.path.splitext(filepath)[0]
         audio_dir = base_filepath.replace("metadata", "audio")
-        if audio_dir.split('/')[-2] == 'validation':
+        if audio_dir.split('/')[-2] in ['validation']:
             audio_dir = '/'.join(audio_dir.split('/')[:-1])
         audio_dir = os.path.abspath(audio_dir)
         return audio_dir
 
     def download_from_meta(self, filename, subpart_data=None, n_jobs=3, chunk_size=10):
         """
-        Download files contained in a meta file (csv)
+        Download files contained in a meta file (tsv)
 
         Args:
             filename: str, path of the meta file containing the name of audio files to donwnload
-                (csv with column "filename")
+                (tsv with column "filename")
             subpart_data: int, the number of files to use, if a subpart of the dataframe wanted.
             chunk_size: int, (Default value = 10) number of files to download in a chunk
             n_jobs : int, (Default value = 3) number of parallel jobs
@@ -229,22 +230,22 @@ class DatasetDcase2019Task4:
         mel_spec = mel_spec.astype(np.float32)
         return mel_spec
 
-    def extract_features_from_meta(self, csv_audio, subpart_data=None):
+    def extract_features_from_meta(self, tsv_audio, subpart_data=None):
         """Extract log mel spectrogram features.
 
         Args:
-            csv_audio : str, file containing names, durations and labels : (name, start, end, label, label_index)
+            tsv_audio : str, file containing names, durations and labels : (name, start, end, label, label_index)
                 the associated wav_filename is Yname_start_end.wav
-            subpart_data: int, number of files to extract features from the csv.
+            subpart_data: int, number of files to extract features from the tsv.
         """
         t1 = time.time()
-        df_meta = self.get_df_from_meta(csv_audio, subpart_data)
-        LOG.info("{} Total file number: {}".format(csv_audio, len(df_meta.filename.unique())))
+        df_meta = self.get_df_from_meta(tsv_audio, subpart_data)
+        LOG.info("{} Total file number: {}".format(tsv_audio, len(df_meta.filename.unique())))
 
         for ind, wav_name in enumerate(df_meta.filename.unique()):
             if ind % 500 == 0:
                 LOG.debug(ind)
-            wav_dir = self.get_audio_dir_path_from_meta(csv_audio)
+            wav_dir = self.get_audio_dir_path_from_meta(tsv_audio)
             wav_path = os.path.join(wav_dir, wav_name)
 
             out_filename = os.path.splitext(wav_name)[0] + ".npy"
@@ -252,7 +253,7 @@ class DatasetDcase2019Task4:
 
             if not os.path.exists(out_path):
                 if not os.path.isfile(wav_path):
-                    LOG.error("File %s is in the csv file but the feature is not extracted!" % wav_path)
+                    LOG.error("File %s is in the tsv file but the feature is not extracted!" % wav_path)
                     df_meta = df_meta.drop(df_meta[df_meta.filename == wav_name].index)
                 else:
                     (audio, _) = read_audio(wav_path, cfg.sample_rate)
