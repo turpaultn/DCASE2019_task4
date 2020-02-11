@@ -39,7 +39,7 @@ The dataset is composed of two subset that can be downloaded independently:
 
 1. (Real recordings) launch `python download_data.py` (in `baseline/` folder).
 2. (Synthetic clips) download at : [synthetic_dataset](https://doi.org/10.5281/zenodo.2583796).
-3. (Public evaluation set: Youtube subset) download at: [evaluation dataset](https://zenodo.org/record/3588172).
+3. **(Public evaluation set: Youtube subset)** download at: [evaluation dataset](https://zenodo.org/record/3588172).
 It contains 692 Youtube files. 
 4. Synthetic evaluation set: Find information here to download them: [Desed repo](https://github.com/turpaultn/DESED)
 
@@ -56,22 +56,26 @@ dataset root
 └───metadata			              (directories containing the annotations files)
 │   │
 │   └───train			              (annotations for the training sets)
-│   │     weak.csv                    (weakly labeled training set list and annotations)
-│   │     unlabel_in_domain.csv       (unlabeled in domain training set list)
-│   │     synthetic.csv               (synthetic data training set list and annotations)
+│   │     weak.tsv                    (weakly labeled training set list and annotations)
+│   │     unlabel_in_domain.tsv       (unlabeled in domain training set list)
+│   │     synthetic.tsv               (synthetic data training set list and annotations)
 │   │
 │   └───validation			          (annotations for the test set)
-│         validation.csv                (validation set list with strong labels)
-│         test_2018.csv                  (test set list with strong labels - DCASE 2018)
-│         eval_2018.csv                (eval set list with strong labels - DCASE 2018)
-│    
+│   │     validation.tsv                (validation set list with strong labels)
+│   │     test_2018.tsv                  (test set list with strong labels - DCASE 2018)
+│   │     eval_2018.tsv                (eval set list with strong labels - DCASE 2018)
+│   │
+│   └───eval			              (annotations for the public eval set (Youtube in papers))
+│         public.tsv  
 └───audio					          (directories where the audio files will be downloaded)
     └───train			              (audio files for the training sets)
     │   └───weak                      (weakly labeled training set)
     │   └───unlabel_in_domain         (unlabeled in domain training set)
     │   └───synthetic                 (synthetic data training set)
     │
-    └───validation			          (validation set)       
+    └───validation			                 
+    └───eval		
+        └───public                            
 ```
 
 #### Synthetic data (1.8Gb)
@@ -102,7 +106,8 @@ If you experience problems during the download of this subset please contact the
 ### Annotation format
 
 #### Weak annotations
-The weak annotations have been verified manually for a small subset of the training set. The weak annotations are provided in a tab separated csv file under the following format:
+The weak annotations have been verified manually for a small subset of the training set. 
+The weak annotations are provided in a tab separated csv file (.tsv) under the following format:
 
 ```
 [filename (string)][tab][event_labels (strings)]
@@ -116,7 +121,7 @@ Y-BJNMHMZDcU_50.000_60.000.wav	Alarm_bell_ringing,Dog
 Synthetic subset and validation set have strong annotations.
 
 The minimum length for an event is 250ms. The minimum duration of the pause between two events from the same class is 150ms. When the silence between two consecutive events from the same class was less than 150ms the events have been merged to a single event.
-The strong annotations are provided in a tab separated csv file under the following format:
+The strong annotations are provided in a tab separated csv file (.tsv) under the following format:
 
 ```
 [filename (string)][tab][event onset time in seconds (float)][tab][event offset time in seconds (float)][tab][event_label (strings)]
