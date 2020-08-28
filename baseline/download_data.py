@@ -94,7 +94,7 @@ def download_file(result_dir, filename):
         raise
 
     # youtube-dl error, file often removed
-    except (ExtractorError, DownloadError) as e:
+    except (ExtractorError, DownloadError, OSError) as e:
         if os.path.exists(tmp_filename):
             os.remove(tmp_filename)
 
