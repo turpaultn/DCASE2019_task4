@@ -1,0 +1,23 @@
+name: dcase2019
+channels:
+  - pytorch
+  - defaults
+  - conda-forge
+dependencies:
+  - python=3.8
+  - cudatoolkit=11.3
+  - pandas
+  - h5py
+  - scipy
+  - ffmpeg
+  - torchvision
+  - pytorch
+  - torchaudio=0.10.1
+  - pysoundfile
+  - librosa
+  - youtube-dl
+  - tqdm
+  - pip
+  - pip:
+    - dcase_util
+    - sed-eval
